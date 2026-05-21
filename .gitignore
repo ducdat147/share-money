@@ -1,0 +1,57 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native directories (Expo CNG - Continuous Native Generation)
+android/
+ios/
+
+# Native build credentials & artifacts
+*.orig.*
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pem
+*.key
+*.mobileprovision
+*.apk
+*.aab
+*.ipa
+
+# Logs
+*.log
+logs/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+pnpm-debug.*
+
+# Metro
+.metro-health-check*
+
+# macOS
+.DS_Store
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# local env files
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# watchman
+.watchmanconfig
