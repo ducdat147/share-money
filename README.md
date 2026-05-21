@@ -1,101 +1,192 @@
-# Share Money 💸 - Ứng dụng Chia tiền Chuyến đi & Quản lý Chi tiêu Nhóm
+# Share Money 💸 - Trip Expense Splitter & Group Expense Manager
 
-Ứng dụng di động được xây dựng bằng **React Native** & **Expo SDK 50+**, thiết kế để giúp các nhóm bạn bè dễ dàng ghi chép chi tiêu, đóng góp quỹ và tự động tính toán số tiền cần thanh toán/hoàn trả một cách minh bạch, nhanh chóng.
-
-## 🚀 Các Tính Nổi Bật
-
-- **Quản lý Chuyến đi**: Tạo mới chuyến đi với danh sách thành viên linh hoạt. Hỗ trợ chỉ định/thay đổi Thủ quỹ nhóm.
-- **Thuật toán Tất toán Tối ưu**: Sử dụng phương pháp **Net Balance** (Tổng số dư nhóm luôn bằng 0) để đưa ra gợi ý "Ai chuyển tiền cho ai" một cách chính xác và tối giản nhất.
-- **Tách bạch Dòng tiền**: Phân biệt rõ ràng giữa **Tiền đóng quỹ** (nộp cho Thủ quỹ) và **Tiền tự chi trả** (trả trực tiếp cho nhóm) để minh bạch hóa mọi khoản đóng góp.
-- **Hệ thống Avatar Động**: Tự động tạo Avatar dựa trên chữ cái đầu của tên thành viên với màu sắc định danh riêng biệt (Hash-based).
-- **Giao diện Trực quan (Semantic UI)**: Hệ thống màu sắc được thiết kế theo cấp độ ưu tiên (Primary/Secondary) với độ tương phản cao chuẩn WCAG.
-- **Bản địa hóa (Localization)**: Hỗ trợ song ngữ đầy đủ Tiếng Việt & Tiếng Anh qua `react-i18next`.
-- **Hỗ trợ Dark Mode / Light Mode**: Tự động chuyển đổi giao diện mượt mà theo cấu hình hệ thống hoặc lựa chọn người dùng.
-- **Offline First**: Lưu trữ dữ liệu an toàn ngay trên thiết bị của bạn bằng SQLite.
+A mobile application built with **React Native** & **Expo SDK 50+**, designed to help groups of friends easily record expenses, contribute to a shared fund, and automatically calculate the most simplified settlements (who owes whom how much) in a transparent and quick manner.
 
 ---
 
-## 🛠️ Công Nghệ Sử Dụng
+## 🚀 Features
 
-- **Core**: React Native 0.81+, Expo SDK 54 (Expo Router v4). Kích hoạt **New Architecture** mặc định.
-- **Database**: `expo-sqlite` (Offline First, hỗ trợ Web qua WebAssembly `.wasm`).
-- **State Management**: `Zustand` (Gọn nhẹ, hiệu năng cực cao).
-- **Localization**: `i18next` & `react-i18next` quản lý đa ngôn ngữ.
-- **Giao diện & Animation**: Vanilla CSS/StyleSheet, `react-native-reanimated` v4 (tối ưu UI Thread).
+- **Trip Management**: Create trips with custom member lists. Easily set or unset the group Treasurer.
+- **Trip-specific Currency**: Configure currency (`VND` or `USD`) per trip with interactive switching in the trip header.
+- **Symmetric Rounding System**: 
+  - Uses high-precision math during intermediate calculations to avoid division anomalies.
+  - Formats and rounds amounts only at presentation boundaries.
+  - Implements symmetric rounding half away from zero (using `Math.sign` and `Number.EPSILON`) to ensure correct presentation for negative amounts (debts) and positive amounts (refunds).
+- **Optimized Settlement Algorithm**: Uses the **Net Balance Approach** (where the sum of all member balances is always 0) combined with a greedy/subset-sum transaction solver in [calculator.ts](../utils/calculator.ts) to minimize the number of transactions needed to settle up.
+- **Split Fund and Direct Payments**: Clearly distinguishes between **Fund Contributions** (deposits made to the Treasurer) and **Advanced Payments** (expenses paid directly for the group) to maintain transparency.
+- **Dynamic Avatar System**: Generates unique initials-based avatars with deterministic colors based on member names (hash-based).
+- **Semantic UI & Dark Mode**:
+  - Color palette organized by priorities (Primary/Secondary) following WCAG contrast guidelines.
+  - Supports automatic light/dark mode switching based on system preferences or manual selections.
+- **Offline First**: Stores data securely on your local device using SQLite database.
+- **Localization**: Supports English and Vietnamese out of the box using `react-i18next`.
+
+---
+
+## 🛠️ Technology Stack
+
+- **Core**: React Native 0.81+, Expo SDK 54 (Expo Router v4). **New Architecture** is enabled by default.
+- **Database**: `expo-sqlite` (Offline First, supports Web via WebAssembly `.wasm`).
+- **State Management**: `Zustand` (lightweight, high-performance).
+- **Localization**: `i18next` & `react-i18next` for translation management.
+- **UI & Animations**: Vanilla React Native StyleSheet, `react-native-reanimated` v4 (running calculations on UI Thread).
 - **Icons**: `@expo/vector-icons` (Ionicons).
-- **Safe Area**: `react-native-safe-area-context` xử lý tối ưu tai thỏ (Notch) & thanh Home Indicator.
+- **Safe Area**: `react-native-safe-area-context` for notch & home indicator padding handling.
 
 ---
 
-## 📦 Hướng Dẫn Cài Đặt & Chạy Dự Án
+## 📦 Getting Started & Local Development
 
-### 📋 Yêu cầu hệ thống
-- Đã cài đặt **Node.js** (Khuyên dùng v18 hoặc mới hơn).
-- Đã cài đặt **Expo Go** trên điện thoại (để test nhanh) hoặc setup sẵn Android Studio / Xcode (để chạy giả lập).
+### 📋 Prerequisites
+- **Node.js** (v18 or newer recommended).
+- **Expo Go** app installed on your physical device, or a set-up emulator (Android Studio / Xcode).
 
-### ⚙️ Các bước thực hiện
+### ⚙️ Installation & Running
 
-1. **Clone dự án về máy tính:**
+1. **Clone the repository:**
    ```bash
-   git clone <URL_REPOS_CUA_BAN>
+   git clone git@github.com:ducdat147/share-money.git
    cd share_money
    ```
 
-2. **Cài đặt các thư viện phụ thuộc (dependencies):**
+2. **Install dependencies:**
    ```bash
    npm install
    ```
 
-3. **Chạy server phát triển (Metro Bundler):**
+3. **Start the Metro Bundler development server:**
    ```bash
    npx expo start -c
    ```
 
-4. **Trải nghiệm ứng dụng:**
-   - Quét mã QR hiển thị trên Terminal bằng camera điện thoại (iOS) hoặc ứng dụng **Expo Go** (Android).
-   - Nhấn `a` để mở trên giả lập Android.
-   - Nhấn `i` để mở trên giả lập iOS (Mac).
-
-### 🛠️ Đóng gói ứng dụng (Build APK)
-Dự án đã được cấu hình sẵn môi trường EAS (định dạng UTF-8, cấu hình Metro) để build APK dễ dàng. Bạn chỉ cần chạy lệnh sau và đợi nhận file APK:
-```bash
-npx eas build -p android --profile preview
-```
+4. **Run on devices/emulators:**
+   - Scan the QR code in the terminal using the Expo Go app (Android) or default Camera app (iOS).
+   - Press `a` to run on Android Emulator.
+   - Press `i` to run on iOS Simulator (macOS only).
 
 ---
 
-## 📁 Cấu Trúc Thư Mục Dự Án
+## 🛠️ Android & iOS Build Guide
+
+The project is pre-configured with **Expo Application Services (EAS)** configuration in `eas.json` for cloud builds. You can also build binaries locally.
+
+### Prerequisites for EAS Build
+1. Install EAS CLI globally:
+   ```bash
+   npm install -g eas-cli
+   ```
+2. Log in to your Expo account:
+   ```bash
+   eas login
+   ```
+3. Initialize the project with EAS (if not configured):
+   ```bash
+   eas project:init
+   ```
+
+---
+
+### 🤖 Android Builds
+
+#### Option 1: Cloud Build with EAS (Recommended)
+- **Generate APK for testing (Preview profile):**
+  ```bash
+  eas build -p android --profile preview
+  ```
+  *This builds an `.apk` file that can be side-loaded and installed on any Android device.*
+  
+- **Generate AAB for Google Play Store (Production profile):**
+  ```bash
+  eas build -p android --profile production
+  ```
+  *This produces an `.aab` file ready for submission to the Google Play Console.*
+
+#### Option 2: Local Native Build
+1. Generate native `android/` directory:
+   ```bash
+   npx expo prebuild --platform android
+   ```
+2. Build and run the app locally using Android SDK:
+   ```bash
+   npx expo run:android
+   ```
+3. Assemble the release build manually:
+   ```bash
+   cd android && ./gradlew assembleRelease
+   ```
+   *The output APK will be located under `android/app/build/outputs/apk/release/app-release.apk`.*
+
+---
+
+### 🍎 iOS Builds
+
+> [!NOTE]
+> Building for iOS requires a macOS machine and an active Apple Developer account for App Store distribution.
+
+#### Option 1: Cloud Build with EAS (Recommended)
+- **Generate Simulator build (for testing on Mac simulators):**
+  ```bash
+  eas build -p ios --profile preview-simulator
+  ```
+  *Produces a `.tar.gz` bundle containing the `.app` package which can be dragged and dropped directly onto your iOS Simulator.*
+
+- **Generate Ad-Hoc / Internal distribution build (for registered test devices):**
+  ```bash
+  eas build -p ios --profile preview
+  ```
+  *Requires registering test device UDIDs through Apple Developer portal.*
+
+- **Generate IPA for App Store (Production profile):**
+  ```bash
+  eas build -p ios --profile production
+  ```
+  *Produces a signed `.ipa` file ready to submit to TestFlight / App Store.*
+
+#### Option 2: Local Native Build
+1. Generate native `ios/` directory & install Cocoapods:
+   ```bash
+   npx expo prebuild --platform ios
+   ```
+2. Build and run the app locally using Xcode:
+   ```bash
+   npx expo run:ios
+   ```
+
+---
+
+## 📁 Project Structure
 
 ```text
 share_money/
-├── app/                  # Các màn hình chính (Expo Router)
-│   ├── _layout.tsx       # Root layout & các Provider (i18n, Dialog, Theme...)
-│   ├── index.tsx         # Màn hình danh sách chuyến đi (Home)
-│   ├── settings.tsx      # Màn hình cấu hình (Ngôn ngữ, Giao diện)
-│   └── trip/             # Các màn hình chi tiết & nghiệp vụ chuyến đi
-│       ├── create.tsx    # Màn hình tạo mới chuyến đi & chọn Thủ quỹ
-│       └── [id]/         # Chi tiết một chuyến đi cụ thể
-│           ├── index.tsx # Màn hình quản lý Chi tiêu / Đóng quỹ / Thành viên
-│           ├── add-expense.tsx  # Thêm/sửa khoản chi tiêu chung
-│           ├── add-payment.tsx  # Thêm/sửa khoản đóng quỹ cho Thủ quỹ
-│           └── summary.tsx      # Trang tổng kết dòng tiền & gợi ý trả nợ
-├── components/           # Các Component dùng chung (TripCard, CustomHeader, MemberSelector...)
-├── constants/            # Định nghĩa màu sắc (Theme), Spacing, Typography
-├── hooks/                # Custom hooks & State stores (useTripStore, useAppTheme...)
-├── locales/              # File bản dịch ngôn ngữ (vi.json, en.json)
-└── utils/                # Các helper, kiểu dữ liệu (Types) & thuật toán chia tiền
+├── app/                  # Application screens & routing (Expo Router)
+│   ├── _layout.tsx       # Root layout & providers (i18n, Dialog, Theme...)
+│   ├── index.tsx         # Home screen (Trip List)
+│   ├── settings.tsx      # Settings screen (Language, Theme)
+│   └── trip/             # Trip workflow sub-screens
+│       ├── create.tsx    # Create a trip & assign Treasurer
+│       └── [id]/         # Trip details workspace
+│           ├── index.tsx # Overview dashboard (Expenses, Payments, Members)
+│           ├── add-expense.tsx  # Add or edit group shared expenses
+│           ├── add-payment.tsx  # Add or edit treasurer fund payments
+│           └── summary.tsx      # Settle-up screen & transaction recommendations
+├── components/           # Reusable UI components (CustomHeader, MemberSelector, TripCard...)
+├── constants/            # Style variables (theme.ts, colors, spacing, typography)
+├── hooks/                # Custom hooks & stores (useTripStore, useAppTheme...)
+├── locales/              # i18n localization translation JSON files (vi.json, en.json)
+└── utils/                # Helper functions, type definitions, and calculators
 ```
 
 ---
 
-## 🔒 Quy Tắc Hiệu Năng & Code Standard
-Dự án tuân thủ nghiêm ngặt các tiêu chuẩn hiệu năng cao:
-- **Design System**: Sử dụng **Semantic Colors** (`onPrimary`, `onSurface`...) để quản lý giao diện tập trung và dễ bảo trì.
-- **Toán học Tài chính**: Thuật toán tính toán nợ dựa trên số dư ròng (**Net Balance**), đảm bảo tính chính xác tuyệt đối ngay cả trong các case phức tạp (Thủ quỹ cầm quỹ, Thủ quỹ tham gia chi tiêu do người khác trả...).
-- **60fps UI**: Nhắm mục tiêu mượt mà ngay cả trên máy cấu hình thấp. Sử dụng tối đa `React.memo`, `useMemo`, và `useCallback`.
-- **Offline First**: Đảm bảo trải nghiệm không gián đoạn với SQLite.
+## 🔒 Code Standards & High Performance
+
+- **Design Consistency**: Utilizes **Semantic Colors** (`onPrimary`, `onSurface`...) in [theme.ts](../constants/theme.ts) to provide centralized palette configurations.
+- **Symmetric Currency Accuracy**: Formats amounts correctly per trip's currency. Keeps calculation float errors in check using `roundCurrency` with symmetric zero-point rounding.
+- **Targeting 60fps**: Prioritizes Functional Components with memoization (`React.memo`, `useMemo`, `useCallback`) to reduce rendering overhead.
+- **Optimized Lists**: Replaces standard scroll maps with virtualized listings where appropriate to prevent memory footprint bloat.
 
 ---
 
-## 📝 Bản quyền & Giấy phép
-Dự án được phân phối dưới giấy phép **MIT License**.
+## 📝 License
+
+This project is open-source and distributed under the **MIT License**.
