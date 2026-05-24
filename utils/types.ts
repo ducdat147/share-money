@@ -39,6 +39,7 @@ export interface MemberSummary {
   memberId: string;
   name: string;
   items: { description: string; share: number }[];
+  advancedItems: { description: string; amount: number }[];
   totalShare: number;
   totalPaid: number;
   fundPayments: number; // Money paid to treasurer
@@ -55,3 +56,5 @@ export interface Settlement {
   toName: string;
   amount: number;
 }
+
+export type SettlementStrategy = 'optimal' | 'centralized';

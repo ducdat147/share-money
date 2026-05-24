@@ -35,17 +35,24 @@
     "trip_name_label": "Tên chuyến đi",
     "trip_name_placeholder": "Ví dụ: Đà Lạt 2026",
     "currency_label": "Đơn vị tiền tệ",
-    "members_label": "Thành viên (chọn 1 người làm thủ quỹ)",
-    "add_member_placeholder": "Nhập tên thành viên",
-    "add_member": "Thêm",
+    "members_label": "Số lượng người tham gia",
+    "member_count_placeholder": "Ví dụ: 5",
     "treasurer": "Thủ quỹ",
-    "treasurer_hint": "💡 Nhấn icon ví để chọn thủ quỹ (không bắt buộc)",
     "submit": "Lưu chuyến đi",
     "submitting": "Đang tạo...",
-    "err_name_exists": "Tên đã tồn tại trong danh sách",
     "err_empty_name": "Vui lòng nhập tên chuyến đi",
     "err_min_members": "Cần ít nhất 2 thành viên",
     "err_create_fail": "Không thể tạo chuyến đi: {{msg}}"
+  },
+  "member_detail": {
+    "title": "Thông tin thành viên",
+    "name_label": "Tên thành viên",
+    "is_treasurer": "Làm thủ quỹ",
+    "add_fund": "Đóng thêm tiền quỹ",
+    "add_fund_desc": "Nhập số tiền thành viên này đóng thêm vào quỹ",
+    "save_success": "Đã cập nhật thông tin",
+    "update_name": "Cập nhật tên",
+    "set_treasurer": "Chỉ định thủ quỹ"
   },
   "trip_detail": {
     "total_expense": "Tổng chi",
@@ -159,7 +166,15 @@
     "settlement_title": "Gợi ý tất toán (Ai chuyển cho ai)",
     "settlement_desc": "Dưới đây là phương án tối ưu nhất để mọi người xóa nợ cho nhau:",
     "settlement_item": "{{from}} chuyển cho {{to}}",
-    "settlement_empty": "Không có nợ cần xóa!"
+    "settlement_empty": "Không có nợ cần xóa!",
+    "settlement_strategy_label": "Cách thức tất toán",
+    "strategy_optimal": "Tối ưu nhất",
+    "strategy_centralized": "Tập trung",
+    "central_member_label": "Người trung gian",
+    "share_settlement": "Chia sẻ bảng tất toán",
+    "share_success": "Đã tạo ảnh chia sẻ",
+    "share_error": "Không thể chia sẻ ảnh",
+    "even": "Đã đều"
   },
   "components": {
     "badge_completed": "Đã kết thúc",

@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator, Modal, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, ActivityIndicator, Modal, TouchableOpacity, Animated, Pressable,
 } from 'react-native';
+import ViewShot from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,8 +29,71 @@ export default function SummaryScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSummary, setSelectedSummary] = useState<MemberSummary | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const [strategy, setStrategy] = useState<import('@/utils/types').SettlementStrategy>('optimal');
+  const [centralMemberId, setCentralMemberId] = useState<string | undefined>(undefined);
+  const viewShotRef = useRef<ViewShot>(null);
+
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const modalTranslateY = useRef(new Animated.Value(600)).current;
 
   const trip = useMemo(() => trips.find((t) => t.id === id), [trips, id]);
+
+  useEffect(() => {
+    if (trip && !centralMemberId) {
+      setCentralMemberId(trip.treasurerId || trip.members[0]?.id);
+    }
+  }, [trip, centralMemberId]);
+
+  const handleShare = async () => {
+    try {
+      if (viewShotRef.current?.capture) {
+        const uri = await viewShotRef.current.capture();
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: t('summary.share_settlement'),
+          UTI: 'public.jpeg',
+        });
+      }
+    } catch (error) {
+      console.error('Sharing error:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedSummary) {
+      setShowModal(true);
+      Animated.parallel([
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(modalTranslateY, {
+          toValue: 0,
+          friction: 9,
+          tension: 35,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(overlayOpacity, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(modalTranslateY, {
+          toValue: 600,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowModal(false);
+      });
+    }
+  }, [selectedSummary]);
 
   useEffect(() => {
     (async () => { if (id) { await loadTrip(id); setIsLoading(false); } })();
@@ -39,7 +104,7 @@ export default function SummaryScreen() {
     return calculateSummary(trip.members, trip.expenses, trip.payments, trip.treasurerId, trip.currency);
   }, [trip]);
 
-  const settlements = useMemo(() => calculateSettlements(summaries, trip?.currency), [summaries, trip?.currency]);
+  const settlements = useMemo(() => calculateSettlements(summaries, trip?.currency, strategy, centralMemberId), [summaries, trip?.currency, strategy, centralMemberId]);
 
   const treasurer = useMemo(() => trip?.members.find((m) => m.id === trip.treasurerId), [trip]);
   const totalFundExpenses = useMemo(() => {
@@ -49,10 +114,7 @@ export default function SummaryScreen() {
       .reduce((sum, e) => sum + e.amount, 0);
   }, [trip]);
   const totalPayments = useMemo(() => (trip ? getTotalPayments(trip.payments) : 0), [trip]);
-  const totalDebt = useMemo(
-    () => summaries.filter((s) => s.debt > 0).reduce((sum, s) => sum + s.debt, 0), [summaries],
-  );
-
+  
   const handleRowPress = useCallback((summary: MemberSummary) => {
     setSelectedSummary(summary);
   }, []);
@@ -122,46 +184,103 @@ export default function SummaryScreen() {
         {/* Settlement Suggestions Section */}
         <View style={styles.settlementSection}>
           <Text style={styles.sectionTitle}>{t('summary.settlement_title')}</Text>
-          <View style={styles.settlementContainer}>
-            <Text style={styles.settlementDesc}>{t('summary.settlement_desc')}</Text>
-            {settlements.length > 0 ? (
-              settlements.map((item, idx) => (
-                <View key={idx} style={styles.settlementItem}>
-                  <View style={styles.settlementAvatarRow}>
-                    <View style={styles.settlementNameBox}>
-                      <Text style={styles.settlementNameFrom}>{item.fromName}</Text>
-                    </View>
-                    <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-                    <View style={styles.settlementNameBox}>
-                      <Text style={styles.settlementNameTo}>{item.toName}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.settlementAmount}>{formatCurrency(item.amount, trip.currency)}</Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.emptySettlement}>{t('summary.settlement_empty')}</Text>
-            )}
+
+          {/* Strategy Selector */}
+          <View style={styles.strategyContainer}>
+            <Text style={styles.strategyLabel}>{t('summary.settlement_strategy_label')}</Text>
+            <View style={styles.strategyToggle}>
+              {(['optimal', 'centralized'] as const).map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.strategyOption, strategy === s && styles.strategyOptionActive]}
+                  onPress={() => setStrategy(s)}
+                >
+                  <Text style={[styles.strategyText, strategy === s && styles.strategyTextActive]}>
+                    {t(`summary.strategy_${s}`)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
+
+          {strategy === 'centralized' && (
+            <View style={styles.centralMemberSelector}>
+              <Text style={styles.strategyLabel}>{t('summary.central_member_label')}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.memberChips}>
+                {trip.members.map((m) => (
+                  <TouchableOpacity
+                    key={m.id}
+                    style={[styles.memberChip, centralMemberId === m.id && styles.memberChipActive]}
+                    onPress={() => setCentralMemberId(m.id)}
+                  >
+                    <Text style={[styles.memberChipText, centralMemberId === m.id && styles.memberChipTextActive]}>
+                      {m.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          <ViewShot
+            ref={viewShotRef}
+            options={{ format: 'jpg', quality: 0.9 }}
+            style={{ backgroundColor: colors.background, borderRadius: BorderRadius.lg, overflow: 'hidden' }}
+          >
+            <View style={styles.settlementContainer}>
+              <Text style={styles.settlementDesc}>{t('summary.settlement_desc')}</Text>
+              {settlements.length > 0 ? (
+                settlements.map((item, idx) => (
+                  <View key={idx} style={styles.settlementItem}>
+                    <View style={styles.settlementAvatarRow}>
+                      <View style={styles.settlementNameBox}>
+                        <Text style={styles.settlementNameFrom}>{item.fromName}</Text>
+                      </View>
+                      <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+                      <View style={styles.settlementNameBox}>
+                        <Text style={styles.settlementNameTo}>{item.toName}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.settlementAmount}>{formatCurrency(item.amount, trip.currency)}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.emptySettlement}>{t('summary.settlement_empty')}</Text>
+              )}
+            </View>
+          </ViewShot>
+
+          {/* New Share Button Positioning */}
+          {settlements.length > 0 && (
+            <TouchableOpacity 
+              onPress={handleShare} 
+              style={styles.shareActionBtn} 
+              activeOpacity={0.8}
+            >
+              <Ionicons name="share-social" size={20} color={colors.onPrimary} />
+              <Text style={styles.shareActionBtnText}>{t('summary.share_settlement')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
-      {/* Detail popup Modal */}
       <Modal
-        visible={!!selectedSummary}
+        visible={showModal}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setSelectedSummary(null)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setSelectedSummary(null)}
-        >
-          <View style={[styles.modalSheet, { paddingBottom: insets.bottom + Spacing.lg }]}>
+        <View style={styles.modalContainer}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedSummary(null)}>
+            <Animated.View style={[styles.modalOverlay, { opacity: overlayOpacity }]} />
+          </Pressable>
+          <Animated.View style={[
+            styles.modalSheet, 
+            { transform: [{ translateY: modalTranslateY }] },
+            { paddingBottom: insets.bottom + Spacing.lg }
+          ]}>
             <View style={styles.modalHandle} />
 
-            {/* Modal header */}
             <View style={styles.modalHeader}>
               <View>
                 <Text style={styles.modalName}>{s?.name}</Text>
@@ -188,7 +307,6 @@ export default function SummaryScreen() {
             </View>
 
             <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-              {/* Expense items */}
               {s && s.items.length > 0 && (
                 <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>{t('summary.expenses_list')}</Text>
@@ -233,6 +351,17 @@ export default function SummaryScreen() {
                     </View>
                   )}
 
+                  {s.advancedItems && s.advancedItems.length > 0 && (
+                    <View style={styles.advancedItemsList}>
+                      {s.advancedItems.map((adv, idx) => (
+                        <View key={`adv-${idx}`} style={styles.advancedItemRow}>
+                          <Text style={styles.advancedItemDesc}>• {adv.description}</Text>
+                          <Text style={styles.advancedItemAmount}>{formatCurrency(adv.amount, trip.currency)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
                   <View style={styles.modalSubtotal}>
                     <Text style={styles.modalSubtotalLabel}>{t('summary.total_paid_label')}</Text>
                     <Text style={[styles.modalSubtotalValue, { color: colors.success }]}>{formatCurrency(s.totalPaid, trip.currency)}</Text>
@@ -252,7 +381,6 @@ export default function SummaryScreen() {
                 </View>
               )}
 
-              {/* Balance Card - Unified for both Debt and Refund */}
               {s && s.debt !== 0 && (
                 <View style={[
                   styles.modalSection, 
@@ -283,20 +411,19 @@ export default function SummaryScreen() {
                 </View>
               )}
 
-              {/* No data */}
               {s && s.items.length === 0 && s.totalPaid === 0 && (
                 <Text style={styles.modalEmpty}>{t('summary.no_expenses')}</Text>
               )}
             </ScrollView>
-          </View>
-        </TouchableOpacity>
+          </Animated.View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
 }
 
-const createStyles = (colors: ThemeColors) =>
-  StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
     content: { padding: Spacing.lg },
@@ -338,6 +465,92 @@ const createStyles = (colors: ThemeColors) =>
     tableSection: { marginBottom: Spacing.lg },
     sectionTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: colors.onBackground, marginBottom: Spacing.md },
     
+    // Strategy Selector UI
+    strategyContainer: {
+      marginBottom: Spacing.md,
+    },
+    strategyLabel: {
+      fontSize: FontSize.xs,
+      fontWeight: FontWeight.bold,
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      marginBottom: Spacing.sm,
+    },
+    strategyToggle: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: BorderRadius.md,
+      padding: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    strategyOption: {
+      flex: 1,
+      paddingVertical: 8,
+      alignItems: 'center',
+      borderRadius: BorderRadius.sm,
+    },
+    strategyOptionActive: {
+      backgroundColor: colors.primary,
+    },
+    strategyText: {
+      fontSize: FontSize.sm,
+      fontWeight: FontWeight.semibold,
+      color: colors.textSecondary,
+    },
+    strategyTextActive: {
+      color: colors.onPrimary,
+    },
+    centralMemberSelector: {
+      marginBottom: Spacing.lg,
+    },
+    memberChips: {
+      gap: Spacing.sm,
+      paddingVertical: 2,
+    },
+    memberChip: {
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 6,
+      borderRadius: BorderRadius.full,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    memberChipActive: {
+      backgroundColor: colors.primaryDark,
+      borderColor: colors.primary,
+    },
+    memberChipText: {
+      fontSize: FontSize.sm,
+      color: colors.textSecondary,
+    },
+    memberChipTextActive: {
+      color: colors.onPrimary,
+      fontWeight: FontWeight.bold,
+    },
+
+    // Share Button
+    shareActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      backgroundColor: colors.primary,
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      marginTop: Spacing.md,
+      elevation: 2,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+    },
+    shareActionBtnText: {
+      fontSize: FontSize.md,
+      fontWeight: FontWeight.bold,
+      color: colors.onPrimary,
+    },
+
     // Settlement Section
     settlementSection: { marginBottom: Spacing.xl },
     settlementContainer: {
@@ -402,13 +615,19 @@ const createStyles = (colors: ThemeColors) =>
     },
 
     // Modal
+    modalContainer: {
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
     modalOverlay: {
-      flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end',
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.overlay,
     },
     modalSheet: {
       backgroundColor: colors.background,
       borderTopLeftRadius: 24, borderTopRightRadius: 24,
-      paddingTop: Spacing.md, maxHeight: '75%',
+      paddingTop: Spacing.md, maxHeight: '85%',
+      borderWidth: 1, borderColor: colors.border,
     },
     modalHandle: {
       width: 40, height: 4, borderRadius: 2,
@@ -439,6 +658,26 @@ const createStyles = (colors: ThemeColors) =>
     },
     modalItemDesc: { fontSize: FontSize.sm, color: colors.onSurfaceSecondary, flex: 1 },
     modalItemAmount: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: colors.onSurface },
+    advancedItemsList: {
+      paddingLeft: Spacing.xl,
+      marginBottom: Spacing.xs,
+    },
+    advancedItemRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingVertical: 2,
+    },
+    advancedItemDesc: {
+      fontSize: FontSize.xs,
+      color: colors.onSurfaceMuted,
+      fontStyle: 'italic',
+      flex: 1,
+    },
+    advancedItemAmount: {
+      fontSize: FontSize.xs,
+      color: colors.onSurfaceMuted,
+      fontStyle: 'italic',
+    },
     modalSubtotal: {
       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
       marginTop: Spacing.sm, paddingTop: Spacing.sm,
@@ -458,3 +697,4 @@ const createStyles = (colors: ThemeColors) =>
     balanceLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold },
     balanceAmount: { fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold },
   });
+}

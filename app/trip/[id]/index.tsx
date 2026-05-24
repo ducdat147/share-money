@@ -12,6 +12,7 @@ import { Trip, Expense, Payment, Member } from '@/utils/types';
 import ExpenseItem from '@/components/ExpenseItem';
 import PaymentItem from '@/components/PaymentItem';
 import UserAvatar from '@/components/UserAvatar';
+import MemberDetailModal from '@/components/MemberDetailModal';
 import { useDialog } from '@/components/DialogProvider';
 import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
@@ -28,12 +29,14 @@ export default function TripDetailScreen() {
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const {
-    trips, loadTrip, removeExpense, removePayment, completeTrip, deleteTrip, addMember, removeMember, updateTreasurer, updateTripCurrency,
+    trips, loadTrip, removeExpense, removePayment, completeTrip, deleteTrip, addMember, removeMember, updateTreasurer, updateTripCurrency, updateMemberName, addPayment,
   } = useTripStore();
 
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
   const [isLoading, setIsLoading] = useState(true);
   const [newMemberName, setNewMemberName] = useState('');
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [isMemberModalVisible, setIsMemberModalVisible] = useState(false);
 
   const trip = useMemo(() => trips.find((t) => t.id === id), [trips, id]);
 
@@ -140,6 +143,30 @@ export default function TripDetailScreen() {
     ]);
   }, [trip, id, updateTreasurer, showDialog, t]);
 
+  const handleMemberPress = useCallback((member: Member) => {
+    setSelectedMember(member);
+    setIsMemberModalVisible(true);
+  }, []);
+
+  const handleUpdateMemberName = useCallback(async (name: string) => {
+    if (selectedMember && id) {
+      await updateMemberName(id, selectedMember.id, name);
+    }
+  }, [selectedMember, id, updateMemberName]);
+
+  const handleToggleTreasurer = useCallback(async () => {
+    if (selectedMember && id) {
+      const newTreasurerId = trip?.treasurerId === selectedMember.id ? undefined : selectedMember.id;
+      await updateTreasurer(id, newTreasurerId);
+    }
+  }, [selectedMember, id, trip?.treasurerId, updateTreasurer]);
+
+  const handleAddFund = useCallback(async (amount: number) => {
+    if (selectedMember && id) {
+      await addPayment(id, selectedMember.id, amount, t('member_detail.add_fund'));
+    }
+  }, [selectedMember, id, addPayment, t]);
+
   const handleCompleteTrip = useCallback(() => {
     if (!trip) return;
     showDialog(t('trip_detail.alert_complete_title'), t('trip_detail.alert_complete_desc'), [
@@ -215,7 +242,7 @@ export default function TripDetailScreen() {
       return (
         <TouchableOpacity
           style={styles.memberRow}
-          onPress={() => handleSetTreasurer(item)}
+          onPress={() => handleMemberPress(item)}
           disabled={trip?.isCompleted}
           activeOpacity={0.7}
         >
@@ -277,7 +304,7 @@ export default function TripDetailScreen() {
           )}
         </TouchableOpacity>
       );
-    }, [trip, id, memberSummaries, handleRemoveMember, handleSetTreasurer, router, styles, colors],
+    }, [trip, id, memberSummaries, handleRemoveMember, handleMemberPress, router, styles, colors],
   );
 
   if (isLoading || !trip) {
@@ -410,6 +437,17 @@ export default function TripDetailScreen() {
           )}
         </View>
       </View>
+
+      <MemberDetailModal
+        visible={isMemberModalVisible}
+        onClose={() => setIsMemberModalVisible(false)}
+        member={selectedMember}
+        isTreasurer={selectedMember?.id === trip.treasurerId}
+        hasTreasurer={!!trip.treasurerId}
+        onUpdateName={handleUpdateMemberName}
+        onToggleTreasurer={handleToggleTreasurer}
+        onAddFund={handleAddFund}
+      />
     </SafeAreaView>
   );
 }

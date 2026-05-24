@@ -35,17 +35,24 @@
     "trip_name_label": "Trip Name",
     "trip_name_placeholder": "e.g., Summer Vacation",
     "currency_label": "Currency",
-    "members_label": "Members (select 1 as treasurer)",
-    "add_member_placeholder": "Enter member name",
-    "add_member": "Add",
+    "members_label": "Number of members",
+    "member_count_placeholder": "e.g., 5",
     "treasurer": "Treasurer",
-    "treasurer_hint": "💡 Tap wallet icon to select treasurer (optional)",
     "submit": "Save Trip",
     "submitting": "Creating...",
-    "err_name_exists": "Name already exists in the list",
     "err_empty_name": "Please enter a trip name",
     "err_min_members": "At least 2 members required",
     "err_create_fail": "Could not create trip: {{msg}}"
+  },
+  "member_detail": {
+    "title": "Member Details",
+    "name_label": "Member Name",
+    "is_treasurer": "Is Treasurer",
+    "add_fund": "Add to fund",
+    "add_fund_desc": "Enter the amount this member is contributing to the fund",
+    "save_success": "Member updated",
+    "update_name": "Update name",
+    "set_treasurer": "Set as Treasurer"
   },
   "trip_detail": {
     "total_expense": "Total Ext.",
@@ -159,7 +166,15 @@
     "settlement_title": "Settlement Suggestions",
     "settlement_desc": "Here is the most efficient way to clear all debts:",
     "settlement_item": "{{from}} pays {{to}}",
-    "settlement_empty": "No debts to clear!"
+    "settlement_empty": "No debts to clear!",
+    "settlement_strategy_label": "Settlement Method",
+    "strategy_optimal": "Optimal",
+    "strategy_centralized": "Centralized",
+    "central_member_label": "Middleman",
+    "share_settlement": "Share settlements",
+    "share_success": "Image generated for sharing",
+    "share_error": "Could not share image",
+    "even": "Even"
   },
   "components": {
     "badge_completed": "Completed",
