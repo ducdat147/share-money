@@ -18,6 +18,7 @@ interface TripStore {
   updateTreasurer: (tripId: string, treasurerId?: string) => Promise<void>;
 
   addMember: (tripId: string, name: string) => Promise<void>;
+  updateMemberName: (tripId: string, memberId: string, name: string) => Promise<void>;
   removeMember: (tripId: string, memberId: string) => Promise<void>;
 
   addExpense: (
@@ -128,6 +129,11 @@ export const useTripStore = create<TripStore>((set, get) => ({
   addMember: async (tripId, name) => {
     const memberId = Crypto.randomUUID();
     await db.insertMember(memberId, tripId, name);
+    await get().loadTrip(tripId);
+  },
+
+  updateMemberName: async (tripId, memberId, name) => {
+    await db.updateMemberName(memberId, name);
     await get().loadTrip(tripId);
   },
 

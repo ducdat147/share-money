@@ -28,9 +28,14 @@ export function calculateSummary(
       .reduce((sum, payment) => sum + payment.amount, 0);
 
     // Sum all expenses this member paid for directly
-    const advancedPayments = expenses
+    const advancedItems = expenses
       .filter((expense) => expense.paidBy === member.id)
-      .reduce((sum, expense) => sum + expense.amount, 0);
+      .map((expense) => ({
+        description: expense.description,
+        amount: expense.amount,
+      }));
+
+    const advancedPayments = advancedItems.reduce((sum, item) => sum + item.amount, 0);
 
     const totalPaid = fundPayments + advancedPayments;
 
@@ -48,6 +53,7 @@ export function calculateSummary(
       memberId: member.id,
       name: member.name,
       items,
+      advancedItems,
       totalShare: roundCurrency(totalShare, currencyCode),
       totalPaid: roundCurrency(totalPaid, currencyCode),
       fundPayments: roundCurrency(fundPayments, currencyCode),
@@ -112,10 +118,54 @@ function findZeroSumSubset(arr: BalanceItem[], size: number, epsilon: number): B
   return backtrack(0, []);
 }
 
+export function calculateCentralizedSettlements(
+  summaries: MemberSummary[],
+  centralMemberId: string,
+  currencyCode: CurrencyCode = 'VND',
+): import('./types').Settlement[] {
+  const settlements: import('./types').Settlement[] = [];
+  const centralMember = summaries.find(s => s.memberId === centralMemberId);
+  if (!centralMember) return [];
+
+  summaries.forEach(s => {
+    if (s.memberId === centralMemberId) return;
+
+    // Positive balance means they are a creditor (should receive money)
+    // Negative balance means they are a debtor (should pay money)
+    if (s.balance < -0.01) {
+      // Debtor pays to central member
+      settlements.push({
+        fromId: s.memberId,
+        fromName: s.name,
+        toId: centralMember.memberId,
+        toName: centralMember.name,
+        amount: roundCurrency(Math.abs(s.balance), currencyCode)
+      });
+    } else if (s.balance > 0.01) {
+      // Central member pays to creditor
+      settlements.push({
+        fromId: centralMember.memberId,
+        fromName: centralMember.name,
+        toId: s.memberId,
+        toName: s.name,
+        amount: roundCurrency(s.balance, currencyCode)
+      });
+    }
+  });
+
+  return settlements;
+}
+
 export function calculateSettlements(
   summaries: MemberSummary[],
   currencyCode: CurrencyCode = 'VND',
+  strategy: import('./types').SettlementStrategy = 'optimal',
+  centralMemberId?: string,
 ): import('./types').Settlement[] {
+  if (strategy === 'centralized' && centralMemberId) {
+    return calculateCentralizedSettlements(summaries, centralMemberId, currencyCode);
+  }
+
   const settlements: import('./types').Settlement[] = [];
   
   // Use pre-calculated balances. 

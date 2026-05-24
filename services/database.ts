@@ -216,6 +216,17 @@ export async function insertMember(
   );
 }
 
+export async function updateMemberName(
+  memberId: string,
+  name: string,
+): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync('UPDATE members SET name = ? WHERE id = ?', [
+    name,
+    memberId,
+  ]);
+}
+
 export async function deleteMember(memberId: string): Promise<void> {
   const database = await getDatabase();
   await database.runAsync('DELETE FROM members WHERE id = ?', [memberId]);
