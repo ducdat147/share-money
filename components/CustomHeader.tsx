@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { ThemeColors, Spacing, FontSize, FontWeight } from '@/constants/theme';
 
+import ScalePressable from './ScalePressable';
+
 interface Props {
   title: string;
   rightAction?: React.ReactNode;
@@ -16,9 +18,9 @@ export default function CustomHeader({ title, rightAction }: Props) {
 
   return (
     <View style={createStyles(colors).header}>
-      <TouchableOpacity onPress={() => router.back()} style={createStyles(colors).backBtn} hitSlop={8}>
+      <ScalePressable onPress={() => router.back()} style={createStyles(colors).backBtn} hitSlop={8}>
         <Ionicons name="arrow-back" size={24} color={colors.text} />
-      </TouchableOpacity>
+      </ScalePressable>
       <Text style={createStyles(colors).headerTitle} numberOfLines={1}>
         {title}
       </Text>

@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   Pressable,
+  Animated,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +21,33 @@ import { Trip } from '@/utils/types';
 import TripCard from '@/components/TripCard';
 import { useDialog } from '@/components/DialogProvider';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+
+import ScalePressable from '@/components/ScalePressable';
+import * as Haptics from 'expo-haptics';
+
+const AnimatedListItem = ({ children, index }: { children: React.ReactNode; index: number }) => {
+  const animatedValue = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(animatedValue, {
+      toValue: 1,
+      duration: 400,
+      delay: index * 100,
+      useNativeDriver: true,
+    }).start();
+  }, [index]);
+
+  const translateY = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [20, 0],
+  });
+
+  return (
+    <Animated.View style={{ opacity: animatedValue, transform: [{ translateY }] }}>
+      {children}
+    </Animated.View>
+  );
+};
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -46,6 +74,7 @@ export default function HomeScreen() {
 
   const handleDeleteTrip = useCallback(
     (tripId: string, tripName: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       showDialog(t('trip_detail.alert_delete_title'), t('trip_detail.alert_delete_desc', { name: tripName }), [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -59,12 +88,14 @@ export default function HomeScreen() {
   );
 
   const renderTrip = useCallback(
-    ({ item }: { item: Trip }) => (
-      <TripCard
-        trip={item}
-        onPress={() => router.push(`/trip/${item.id}`)}
-        onDelete={() => handleDeleteTrip(item.id, item.name)}
-      />
+    ({ item, index }: { item: Trip; index: number }) => (
+      <AnimatedListItem index={index}>
+        <TripCard
+          trip={item}
+          onPress={() => router.push(`/trip/${item.id}`)}
+          onDelete={() => handleDeleteTrip(item.id, item.name)}
+        />
+      </AnimatedListItem>
     ),
     [router, handleDeleteTrip],
   );
@@ -123,13 +154,13 @@ export default function HomeScreen() {
       {/* Header with hamburger and search */}
       <View style={styles.headerContainer}>
         <View style={styles.headerTop}>
-          <TouchableOpacity
+          <ScalePressable
             onPress={() => setMenuVisible(true)}
             style={styles.hamburgerBtn}
             hitSlop={8}
           >
             <Ionicons name="menu" size={26} color={colors.onBackground} />
-          </TouchableOpacity>
+          </ScalePressable>
           
           <View style={styles.searchContainer}>
             <Ionicons
@@ -167,13 +198,13 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <TouchableOpacity
+      <ScalePressable
         style={[styles.fab, { bottom: Spacing.xxl + insets.bottom }]}
         onPress={() => router.push('/trip/create')}
-        activeOpacity={0.8}
+        haptic={Haptics.ImpactFeedbackStyle.Heavy}
       >
         <Ionicons name="add" size={28} color={colors.onPrimary} />
-      </TouchableOpacity>
+      </ScalePressable>
 
       {/* Hamburger Menu Modal */}
       <Modal
