@@ -54,51 +54,51 @@ const CommonColors = {
 
 export const DarkColors = {
   // Brand
-  primary: Palette.coral[500],
-  primaryLight: Palette.coral[400],
-  primaryDark: Palette.coral[700],
+  primary: '#FF6B4A', // Slightly more vibrant coral for Dark Mode
+  primaryLight: Palette.coral[300],
+  primaryDark: Palette.coral[600],
   onPrimary: CommonColors.white,
 
-  secondary: Palette.forest[500],
+  secondary: '#3DA57A', // More vibrant forest green for Dark Mode
   onSecondary: CommonColors.white,
 
-  accent: Palette.sun[500],
-  accentLight: Palette.sun[600],
+  accent: Palette.sun[400],
+  accentLight: Palette.sun[500],
   onAccent: CommonColors.white,
 
   // Status
-  success: Palette.forest[500],
+  success: '#3DA57A',
   onSuccess: CommonColors.white,
-  warning: Palette.sun[500],
+  warning: Palette.sun[400],
   onWarning: Palette.slate[900],
-  danger: '#EF4444',
+  danger: '#FF5252',
   onDanger: CommonColors.white,
-  info: Palette.sky[500],
+  info: '#4FC3F7',
   onInfo: CommonColors.white,
 
   // Surfaces & Backgrounds
-  background: Palette.slate[950],
-  onBackground: Palette.slate[50],
+  background: '#0B0F1A', // Deeper blue-slate
+  onBackground: '#F8FAFC',
   
-  surface: Palette.slate[900],
-  onSurface: Palette.slate[100],
-  onSurfaceSecondary: Palette.slate[400],
-  onSurfaceMuted: Palette.slate[500],
+  surface: '#151C2C', // Slightly lighter than background
+  onSurface: '#F1F5F9',
+  onSurfaceSecondary: '#94A3B8',
+  onSurfaceMuted: '#64748B',
   
-  surfaceElevated: Palette.slate[800],
-  onSurfaceElevated: Palette.slate[100],
+  surfaceElevated: '#1E293B',
+  onSurfaceElevated: '#F1F5F9',
 
-  border: Palette.slate[800],
-  borderLight: Palette.slate[700],
+  border: '#2D3748',
+  borderLight: '#1A202C',
 
-  overlay: 'rgba(0, 0, 0, 0.7)',
-  cardGradientStart: Palette.slate[900],
-  cardGradientEnd: Palette.slate[950],
+  overlay: 'rgba(0, 0, 0, 0.75)',
+  cardGradientStart: '#151C2C',
+  cardGradientEnd: '#0B0F1A',
 
-  text: Palette.slate[50],
-  textSecondary: Palette.slate[400],
-  textMuted: Palette.slate[500],
-  textInverse: Palette.slate[900],
+  text: '#F8FAFC',
+  textSecondary: '#94A3B8',
+  textMuted: '#64748B',
+  textInverse: '#0F172A',
 };
 
 export const LightColors: ThemeColors = {

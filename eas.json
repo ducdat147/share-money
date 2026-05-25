@@ -9,7 +9,10 @@
     },
     "preview": {
       "distribution": "internal",
+      "node": "22.17.1",
+      "pnpm": "10.17.1",
       "env": {
+        "NODE_OPTIONS": "--max-old-space-size=8192",
         "EXPO_EAS_BUILD_MAX_WORKERS": "2",
         "JAVA_TOOL_OPTIONS": "-Xmx4096m"
       },

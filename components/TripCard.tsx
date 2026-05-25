@@ -7,6 +7,9 @@ import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { formatCurrency, getTotalExpenses } from '@/utils/calculator';
 
+import ScalePressable from './ScalePressable';
+import * as Haptics from 'expo-haptics';
+
 interface TripCardProps {
   trip: Trip;
   onPress: () => void;
@@ -20,13 +23,16 @@ const TripCard: React.FC<TripCardProps> = React.memo(({ trip, onPress, onDelete 
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const handleDelete = useCallback(() => onDelete?.(), [onDelete]);
+  const handleDelete = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    onDelete?.();
+  }, [onDelete]);
 
   return (
-    <TouchableOpacity
+    <ScalePressable
       style={styles.card}
       onPress={onPress}
-      activeOpacity={0.7}
+      haptic={Haptics.ImpactFeedbackStyle.Medium}
     >
       <View style={styles.header}>
         <View style={styles.titleRow}>
@@ -75,7 +81,7 @@ const TripCard: React.FC<TripCardProps> = React.memo(({ trip, onPress, onDelete 
         <Text style={styles.totalLabel}>{t('components.total_expense')}</Text>
         <Text style={styles.totalValue}>{formatCurrency(totalExpenses, trip.currency)}</Text>
       </View>
-    </TouchableOpacity>
+    </ScalePressable>
   );
 });
 

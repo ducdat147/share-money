@@ -4,6 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 
+import ScalePressable from './ScalePressable';
+import * as Haptics from 'expo-haptics';
+
 interface Props {
   title: string;
   icon?: keyof typeof Ionicons.glyphMap;
@@ -18,7 +21,7 @@ export default function SubmitButton({ title, icon, onPress, disabled, color = '
 
   return (
     <View style={styles.footer}>
-      <TouchableOpacity
+      <ScalePressable
         style={[
           styles.submitBtn,
           color === 'success' && styles.submitBtnSuccess,
@@ -26,11 +29,11 @@ export default function SubmitButton({ title, icon, onPress, disabled, color = '
         ]}
         onPress={onPress}
         disabled={disabled}
-        activeOpacity={0.8}
+        haptic={Haptics.ImpactFeedbackStyle.Medium}
       >
         {icon && <Ionicons name={icon} size={22} color={color === 'success' ? colors.onSuccess : colors.onPrimary} />}
         <Text style={[styles.submitText, { color: color === 'success' ? colors.onSuccess : colors.onPrimary }]}>{title}</Text>
-      </TouchableOpacity>
+      </ScalePressable>
     </View>
   );
 }
