@@ -126,7 +126,6 @@ export default function AddExpenseScreen() {
               placeholder={t('add_expense.desc_placeholder')}
               placeholderTextColor={colors.textMuted}
               autoFocus
-              id="expense-description-input"
             />
           </View>
 
@@ -139,7 +138,6 @@ export default function AddExpenseScreen() {
               placeholder="0"
               placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
-              id="expense-amount-input"
             />
             {amount > 0 && selectedMembers.length > 0 && (
               <View style={styles.perPersonInfo}>

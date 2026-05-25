@@ -85,7 +85,6 @@ export default function CreateTripScreen() {
               placeholder={t('create_trip.trip_name_placeholder')}
               placeholderTextColor={colors.textMuted}
               autoFocus
-              id="trip-name-input"
             />
           </View>
 
@@ -126,7 +125,6 @@ export default function CreateTripScreen() {
               placeholder={t('create_trip.member_count_placeholder')}
               placeholderTextColor={colors.textMuted}
               keyboardType="number-pad"
-              id="member-count-input"
             />
           </View>
         </ScrollView>

@@ -1,4 +1,4 @@
-import { Expense, Member, MemberSummary, Payment } from './types';
+import { Expense, Member, MemberSummary, Payment, Settlement, SettlementStrategy } from './types';
 import { roundCurrency, CurrencyCode } from './currency';
 export { formatCurrency, roundCurrency } from './currency';
 
@@ -22,7 +22,7 @@ export function calculateSummary(
 
     const totalShare = items.reduce((sum, item) => sum + item.share, 0);
 
-    // Sum all payments this member made to the treasurer
+    // Sum all payments made by this member to the treasurer
     const fundPayments = payments
       .filter((payment) => payment.memberId === member.id)
       .reduce((sum, payment) => sum + payment.amount, 0);
@@ -42,12 +42,22 @@ export function calculateSummary(
     // TRUE BALANCE: (Contribution) - (Consumption)
     // For normal members: totalPaid - totalShare
     // For treasurer: totalPaid - totalShare - (Total Fund they are holding)
-    const fundHeld = member.id === treasurerId ? totalFundReceived : 0;
-    
-    let balance = totalPaid - totalShare - fundHeld;
+    let balance = 0;
+    let fundHeld = 0;
 
-    // Individual "Debt" for UI (Remaining to pay to treasurer or group)
-    const debt = roundCurrency(-balance, currencyCode);
+    if (member.id === treasurerId) {
+      fundHeld = totalFundReceived;
+      balance = totalPaid - totalShare - fundHeld;
+    } else {
+      balance = totalPaid - totalShare;
+    }
+
+    // Debt calculation for simplified settlement (relative to treasurer)
+    // Positive = owes treasurer, Negative = treasurer owes them
+    let debt = 0;
+    if (treasurerId && member.id !== treasurerId) {
+      debt = totalShare - totalPaid;
+    }
 
     return {
       memberId: member.id,
@@ -60,44 +70,15 @@ export function calculateSummary(
       advancedPayments: roundCurrency(advancedPayments, currencyCode),
       fundHeld: roundCurrency(fundHeld, currencyCode),
       balance: roundCurrency(balance, currencyCode),
-      debt,
+      debt: roundCurrency(debt, currencyCode),
     };
   });
 }
 
-type BalanceItem = { id: string; name: string; amount: number };
-
-function runGreedy(balances: BalanceItem[], currencyCode: CurrencyCode): import('./types').Settlement[] {
-  const settlements: import('./types').Settlement[] = [];
-  const localBalances = balances.map(b => ({ ...b })); // Clone
-  
-  const creditors = localBalances.filter(b => b.amount > 0).sort((a, b) => b.amount - a.amount);
-  const debtors = localBalances.filter(b => b.amount < 0).sort((a, b) => a.amount - b.amount);
-
-  let i = 0; // creditor index
-  let j = 0; // debtor index
-
-  while (i < creditors.length && j < debtors.length) {
-    const amount = Math.min(creditors[i].amount, -debtors[j].amount);
-    
-    if (amount > 0.01) {
-      settlements.push({
-        fromId: debtors[j].id,
-        fromName: debtors[j].name,
-        toId: creditors[i].id,
-        toName: creditors[i].name,
-        amount: roundCurrency(amount, currencyCode)
-      });
-    }
-
-    creditors[i].amount -= amount;
-    debtors[j].amount += amount;
-
-    if (creditors[i].amount < 0.01) i++;
-    if (debtors[j].amount > -0.01) j++;
-  }
-
-  return settlements;
+interface BalanceItem {
+  id: string;
+  name: string;
+  amount: number;
 }
 
 function findZeroSumSubset(arr: BalanceItem[], size: number, epsilon: number): BalanceItem[] | null {
@@ -122,8 +103,8 @@ export function calculateCentralizedSettlements(
   summaries: MemberSummary[],
   centralMemberId: string,
   currencyCode: CurrencyCode = 'VND',
-): import('./types').Settlement[] {
-  const settlements: import('./types').Settlement[] = [];
+): Settlement[] {
+  const settlements: Settlement[] = [];
   const centralMember = summaries.find(s => s.memberId === centralMemberId);
   if (!centralMember) return [];
 
@@ -159,53 +140,85 @@ export function calculateCentralizedSettlements(
 export function calculateSettlements(
   summaries: MemberSummary[],
   currencyCode: CurrencyCode = 'VND',
-  strategy: import('./types').SettlementStrategy = 'optimal',
+  strategy: SettlementStrategy = 'optimal',
   centralMemberId?: string,
-): import('./types').Settlement[] {
+): Settlement[] {
   if (strategy === 'centralized' && centralMemberId) {
     return calculateCentralizedSettlements(summaries, centralMemberId, currencyCode);
   }
 
-  const settlements: import('./types').Settlement[] = [];
+  const settlements: Settlement[] = [];
   
   // Use pre-calculated balances. 
   // Positive balance = Creditor (owed money), Negative balance = Debtor (owes money)
   let balances = summaries
-    .map(s => ({
+    .map((s) => ({
       id: s.memberId,
       name: s.name,
-      amount: s.balance
+      amount: s.balance,
     }))
-    .filter(b => Math.abs(b.amount) > 0.01);
+    .filter((b) => Math.abs(b.amount) > 0.01);
 
-  // 1. TỐI ƯU HÓA: Tìm các nhóm nhỏ có tổng bằng 0 (Subset Sum)
-  // Chỉ áp dụng nếu số lượng người có số dư khác 0 <= 15
-  if (balances.length <= 15) {
-    const epsilon = 0.01;
-    // Tìm các tập con có kích thước từ nhỏ đến lớn (từ 2 đến N)
-    // Ưu tiên tập con nhỏ trước để tối đa hóa số lượng tập con, qua đó tối thiểu hóa số giao dịch
+  const epsilon = 0.01;
+
+  // Subset Sum Optimization (for groups up to 15 people)
+  if (balances.length > 0 && balances.length <= 15) {
     for (let size = 2; size <= balances.length; size++) {
-      let found = true;
-      while (found) {
-        found = false;
-        const combo = findZeroSumSubset(balances, size, epsilon);
-        if (combo) {
-          // Xử lý tập con có tổng = 0 bằng Greedy (luôn cho kết quả tối ưu với các tập con này)
-          settlements.push(...runGreedy(combo, currencyCode));
-          
-          // Loại bỏ những thành viên đã được thanh toán khỏi mảng balances
-          const comboIds = new Set(combo.map(c => c.id));
-          balances = balances.filter(b => !comboIds.has(b.id));
-          found = true; // Tiếp tục tìm các tập con khác có cùng kích thước
+      let subset: BalanceItem[] | null;
+      while ((subset = findZeroSumSubset(balances, size, epsilon))) {
+        // Resolve this independent subset
+        let subsetDebtors = subset.filter((b) => b.amount < 0).sort((a, b) => a.amount - b.amount);
+        let subsetCreditors = subset.filter((b) => b.amount > 0).sort((a, b) => b.amount - a.amount);
+
+        while (subsetDebtors.length > 0 && subsetCreditors.length > 0) {
+          const debtor = subsetDebtors[0];
+          const creditor = subsetCreditors[0];
+          const amount = Math.min(Math.abs(debtor.amount), creditor.amount);
+
+          settlements.push({
+            fromId: debtor.id,
+            fromName: debtor.name,
+            toId: creditor.id,
+            toName: creditor.name,
+            amount: roundCurrency(amount, currencyCode),
+          });
+
+          debtor.amount += amount;
+          creditor.amount -= amount;
+
+          if (Math.abs(debtor.amount) < epsilon) subsetDebtors.shift();
+          if (Math.abs(creditor.amount) < epsilon) subsetCreditors.shift();
         }
+        
+        // Remove processed members from the main balances pool
+        const subsetIds = subset.map(b => b.id);
+        balances = balances.filter(b => !subsetIds.includes(b.id));
       }
     }
   }
 
-  // 2. GREEDY FALLBACK
-  // Xử lý những người còn lại, hoặc xử lý tất cả nếu số lượng người > 15
-  if (balances.length > 0) {
-    settlements.push(...runGreedy(balances, currencyCode));
+  // Final Greedy Pass for any remaining balances
+  let debtors = balances.filter((b) => b.amount < 0).sort((a, b) => a.amount - b.amount);
+  let creditors = balances.filter((b) => b.amount > 0).sort((a, b) => b.amount - a.amount);
+
+  while (debtors.length > 0 && creditors.length > 0) {
+    const debtor = debtors[0];
+    const creditor = creditors[0];
+    const amount = Math.min(Math.abs(debtor.amount), creditor.amount);
+
+    settlements.push({
+      fromId: debtor.id,
+      fromName: debtor.name,
+      toId: creditor.id,
+      toName: creditor.name,
+      amount: roundCurrency(amount, currencyCode),
+    });
+
+    debtor.amount += amount;
+    creditor.amount -= amount;
+
+    if (Math.abs(debtor.amount) < epsilon) debtors.shift();
+    if (Math.abs(creditor.amount) < epsilon) creditors.shift();
   }
 
   return settlements;
@@ -219,22 +232,12 @@ export function getTotalPayments(payments: Payment[]): number {
   return payments.reduce((sum, p) => sum + p.amount, 0);
 }
 
-
-
-export function getInitials(name: string): string {
-  if (!name) return '?';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].substring(0, 1).toUpperCase();
-  return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
-}
-
 const AVATAR_COLORS = [
-  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD',
-  '#D4A5A5', '#9B59B6', '#3498DB', '#E67E22', '#2ECC71',
-  '#F1C40F', '#E74C3C', '#16A085', '#273C75', '#F368E0'
+  '#FF5733', '#33FF57', '#3357FF', '#F333FF', '#33FFF3',
+  '#FF3385', '#FF8533', '#8533FF', '#33FF85', '#5733FF',
 ];
 
-export function getMemberColor(name: string): string {
+export function getAvatarColor(name: string): string {
   if (!name) return '#95A5A6';
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
@@ -242,4 +245,13 @@ export function getMemberColor(name: string): string {
   }
   const index = Math.abs(hash) % AVATAR_COLORS.length;
   return AVATAR_COLORS[index];
+}
+
+export const getMemberColor = getAvatarColor;
+
+export function getInitials(name: string): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
