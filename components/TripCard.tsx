@@ -27,7 +27,6 @@ const TripCard: React.FC<TripCardProps> = React.memo(({ trip, onPress, onDelete 
       style={styles.card}
       onPress={onPress}
       activeOpacity={0.7}
-      id={`trip-card-${trip.id}`}
     >
       <View style={styles.header}>
         <View style={styles.titleRow}>

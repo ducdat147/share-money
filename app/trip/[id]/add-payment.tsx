@@ -106,7 +106,6 @@ export default function AddPaymentScreen() {
               style={styles.dropdownTrigger}
               onPress={() => setDropdownOpen(true)}
               activeOpacity={0.8}
-              id="member-dropdown-trigger"
             >
               {selectedMember ? (
                 <View style={styles.dropdownSelected}>
@@ -142,7 +141,6 @@ export default function AddPaymentScreen() {
               placeholder="0"
               placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
-              id="payment-amount-input"
             />
           </View>
 
@@ -154,7 +152,6 @@ export default function AddPaymentScreen() {
               onChangeText={setNote}
               placeholder={t('add_payment.note_placeholder')}
               placeholderTextColor={colors.textMuted}
-              id="payment-note-input"
             />
           </View>
         </ScrollView>

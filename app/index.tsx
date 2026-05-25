@@ -127,7 +127,6 @@ export default function HomeScreen() {
             onPress={() => setMenuVisible(true)}
             style={styles.hamburgerBtn}
             hitSlop={8}
-            id="hamburger-menu"
           >
             <Ionicons name="menu" size={26} color={colors.onBackground} />
           </TouchableOpacity>
@@ -146,7 +145,6 @@ export default function HomeScreen() {
               placeholder={t('home.search_placeholder')}
               placeholderTextColor={colors.textMuted}
               returnKeyType="search"
-              id="search-input"
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity
@@ -173,7 +171,6 @@ export default function HomeScreen() {
         style={[styles.fab, { bottom: Spacing.xxl + insets.bottom }]}
         onPress={() => router.push('/trip/create')}
         activeOpacity={0.8}
-        id="create-trip-button"
       >
         <Ionicons name="add" size={28} color={colors.onPrimary} />
       </TouchableOpacity>

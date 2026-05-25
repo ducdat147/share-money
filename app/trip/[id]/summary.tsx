@@ -15,9 +15,9 @@ import UserAvatar from '@/components/UserAvatar';
 import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import {
-  calculateSummary, calculateSettlements, formatCurrency, getTotalExpenses, getTotalPayments,
+  calculateSummary, calculateSettlements, formatCurrency, getTotalPayments,
 } from '@/utils/calculator';
-import { MemberSummary, Settlement } from '@/utils/types';
+import { MemberSummary, Settlement, SettlementStrategy } from '@/utils/types';
 
 export default function SummaryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,7 +31,7 @@ export default function SummaryScreen() {
   const [selectedSummary, setSelectedSummary] = useState<MemberSummary | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  const [strategy, setStrategy] = useState<import('@/utils/types').SettlementStrategy>('optimal');
+  const [strategy, setStrategy] = useState<SettlementStrategy>('optimal');
   const [centralMemberId, setCentralMemberId] = useState<string | undefined>(undefined);
   const viewShotRef = useRef<ViewShot>(null);
 
@@ -106,7 +106,7 @@ export default function SummaryScreen() {
 
   const settlements = useMemo(() => calculateSettlements(summaries, trip?.currency, strategy, centralMemberId), [summaries, trip?.currency, strategy, centralMemberId]);
 
-  const treasurer = useMemo(() => trip?.members.find((m) => m.id === trip.treasurerId), [trip]);
+  const treasurer = trip?.members.find((m) => m.id === trip.treasurerId);
   const totalFundExpenses = useMemo(() => {
     if (!trip) return 0;
     return trip.expenses
@@ -181,22 +181,20 @@ export default function SummaryScreen() {
           />
         </View>
 
-        {/* Settlement Suggestions Section */}
         <View style={styles.settlementSection}>
           <Text style={styles.sectionTitle}>{t('summary.settlement_title')}</Text>
 
-          {/* Strategy Selector */}
           <View style={styles.strategyContainer}>
             <Text style={styles.strategyLabel}>{t('summary.settlement_strategy_label')}</Text>
             <View style={styles.strategyToggle}>
-              {(['optimal', 'centralized'] as const).map((s) => (
+              {(['optimal', 'centralized'] as const).map((strat) => (
                 <TouchableOpacity
-                  key={s}
-                  style={[styles.strategyOption, strategy === s && styles.strategyOptionActive]}
-                  onPress={() => setStrategy(s)}
+                  key={strat}
+                  style={[styles.strategyOption, strategy === strat && styles.strategyOptionActive]}
+                  onPress={() => setStrategy(strat)}
                 >
-                  <Text style={[styles.strategyText, strategy === s && styles.strategyTextActive]}>
-                    {t(`summary.strategy_${s}`)}
+                  <Text style={[styles.strategyText, strategy === strat && styles.strategyTextActive]}>
+                    {t(`summary.strategy_${strat}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -250,7 +248,6 @@ export default function SummaryScreen() {
             </View>
           </ViewShot>
 
-          {/* New Share Button Positioning */}
           {settlements.length > 0 && (
             <TouchableOpacity 
               onPress={handleShare} 
@@ -353,7 +350,7 @@ export default function SummaryScreen() {
 
                   {s.advancedItems && s.advancedItems.length > 0 && (
                     <View style={styles.advancedItemsList}>
-                      {s.advancedItems.map((adv, idx) => (
+                      {s.advancedItems.map((adv: any, idx: number) => (
                         <View key={`adv-${idx}`} style={styles.advancedItemRow}>
                           <Text style={styles.advancedItemDesc}>• {adv.description}</Text>
                           <Text style={styles.advancedItemAmount}>{formatCurrency(adv.amount, trip.currency)}</Text>
@@ -465,7 +462,6 @@ function createStyles(colors: ThemeColors) {
     tableSection: { marginBottom: Spacing.lg },
     sectionTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: colors.onBackground, marginBottom: Spacing.md },
     
-    // Strategy Selector UI
     strategyContainer: {
       marginBottom: Spacing.md,
     },
@@ -529,7 +525,6 @@ function createStyles(colors: ThemeColors) {
       fontWeight: FontWeight.bold,
     },
 
-    // Share Button
     shareActionBtn: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -539,11 +534,6 @@ function createStyles(colors: ThemeColors) {
       paddingVertical: Spacing.md,
       borderRadius: BorderRadius.md,
       marginTop: Spacing.md,
-      elevation: 2,
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
     },
     shareActionBtnText: {
       fontSize: FontSize.md,
@@ -551,7 +541,6 @@ function createStyles(colors: ThemeColors) {
       color: colors.onPrimary,
     },
 
-    // Settlement Section
     settlementSection: { marginBottom: Spacing.xl },
     settlementContainer: {
       backgroundColor: colors.surface,
@@ -614,7 +603,6 @@ function createStyles(colors: ThemeColors) {
       paddingVertical: Spacing.md,
     },
 
-    // Modal
     modalContainer: {
       flex: 1,
       justifyContent: 'flex-end',

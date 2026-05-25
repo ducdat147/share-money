@@ -402,7 +402,6 @@ export default function TripDetailScreen() {
             style={[styles.actionBtn, styles.expenseBtn, styles.primaryBtn]} 
             onPress={() => router.push(`/trip/${id}/add-expense`)} 
             activeOpacity={0.8} 
-            id="add-expense-button"
           >
             <Ionicons name="add-circle" size={24} color={colors.onPrimary} />
             <Text style={[styles.actionBtnText, styles.primaryBtnText, { color: colors.onPrimary }]}>
@@ -413,13 +412,13 @@ export default function TripDetailScreen() {
 
         <View style={styles.secondaryActionsRow}>
           {treasurer && !trip.isCompleted && (
-            <TouchableOpacity style={[styles.actionBtn, styles.secondaryBtn, styles.paymentBtn]} onPress={() => router.push(`/trip/${id}/add-payment`)} activeOpacity={0.8} id="add-payment-button">
+            <TouchableOpacity style={[styles.actionBtn, styles.secondaryBtn, styles.paymentBtn]} onPress={() => router.push(`/trip/${id}/add-payment`)} activeOpacity={0.8}>
               <Ionicons name="cash" size={18} color={colors.onSuccess} />
               <Text style={[styles.actionBtnText, { color: colors.onSuccess }]}>{t('trip_detail.action_add_payment')}</Text>
             </TouchableOpacity>
           )}
           
-          <TouchableOpacity style={[styles.actionBtn, styles.secondaryBtn, styles.summaryBtn]} onPress={() => router.push(`/trip/${id}/summary`)} activeOpacity={0.8} id="view-summary-button">
+          <TouchableOpacity style={[styles.actionBtn, styles.secondaryBtn, styles.summaryBtn]} onPress={() => router.push(`/trip/${id}/summary`)} activeOpacity={0.8}>
             <Ionicons name="bar-chart" size={18} color={colors.onSurfaceElevated} />
             <Text style={[styles.actionBtnText, { color: colors.onSurfaceElevated }]}>{t('trip_detail.action_summary')}</Text>
           </TouchableOpacity>
