@@ -80,6 +80,16 @@ Khoản chi trả từ quỹ, paid_by NULL           -> sum(balances) = -120.000
 
 ---
 
+## 📅 Cập Nhật (22-09-2026) — Khoá đơn vị tiền tệ sau khi tạo chuyến đi
+
+Đơn vị tiền tệ chỉ chọn được ở [create.tsx](../app/trip/create.tsx). Sau đó không đổi được nữa. Lý do: đổi VND sang USD chỉ đổi cách hiển thị, các số đã nhập giữ nguyên nên `1.000.000` VND thành `1.000.000` USD và sổ sách sai hoàn toàn.
+
+* Đã xoá `handleChangeCurrency` ở màn detail, `updateTripCurrency` trong [useTripStore.ts](../hooks/useTripStore.ts) và [database.ts](../services/database.ts).
+* Nút đổi ở header nay là badge tĩnh hiển thị mã tiền tệ.
+* Hai key i18n `change_currency_*` từng thiếu ở cả 2 locale nên không còn tồn tại nữa, mục nợ kỹ thuật tương ứng ở phần F bên dưới đã hết hiệu lực.
+
+---
+
 ## 📅 Cập Nhật (05-08-2026) — Home, Infinite Scroll & Deps
 
 ### A. Sửa lỗi "nhấn + tạo chuyến đi nhiều lần không được"

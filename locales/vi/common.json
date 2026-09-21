@@ -5,6 +5,9 @@
 		"desc_label": "Mô tả",
 		"desc_placeholder": "Ví dụ: Ăn trưa, Đổ xăng...",
 		"err_fail": "Không thể thêm chi tiêu",
+		"err_no_description": "Vui lòng nhập mô tả",
+		"err_no_participants": "Vui lòng chọn ít nhất một người tham gia",
+		"err_no_payer": "Vui lòng chọn người chi",
 		"participants_label": "Người tham gia chia tiền",
 		"payer_label": "Người chi",
 		"payer_placeholder": "Chọn người chi...",
@@ -48,14 +51,14 @@
 	"components": {
 		"badge_active": "Đang diễn ra",
 		"badge_completed": "Đã kết thúc",
-		"deselect_all": "Bỏ chọn tất cả",
+		"deselect_all": "Bỏ tất cả",
 		"expense_count": "{{count}} khoản chi",
 		"member_count": "{{count}} người",
 		"note": "Ghi chú",
 		"paid_by": "Trả bởi",
 		"participants_count": "Người tham gia ({{selected}}/{{total}})",
 		"payer_prefix": "Người chi: ",
-		"select_all": "Chọn tất cả",
+		"select_all": "Tất cả",
 		"total_expense": "Tổng chi"
 	},
 	"create_trip": {

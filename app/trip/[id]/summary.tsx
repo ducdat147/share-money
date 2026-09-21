@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTripStore } from '@/hooks/useTripStore';
@@ -17,11 +17,10 @@ import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/cons
 import {
   calculateSummary, calculateSettlements, formatCurrency, getTotalPayments,
 } from '@/utils/calculator';
-import { MemberSummary, Settlement, SettlementStrategy } from '@/utils/types';
+import { MemberSummary, SettlementStrategy } from '@/utils/types';
 
 export default function SummaryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { trips, loadTrip } = useTripStore();
   const { colors } = useAppTheme();
@@ -430,11 +429,6 @@ function createStyles(colors: ThemeColors) {
       borderWidth: 1, borderColor: colors.primaryDark,
     },
     treasurerHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.md },
-    treasurerIcon: {
-      width: 40, height: 40, borderRadius: 20,
-      backgroundColor: colors.primaryDark,
-      justifyContent: 'center', alignItems: 'center',
-    },
     treasurerBalanceLabel: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: colors.onSurfaceElevated },
     treasurerBalanceNote: { fontSize: FontSize.xs, color: colors.onSurfaceSecondary, marginTop: 2 },
     fundDetails: {

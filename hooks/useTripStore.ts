@@ -19,7 +19,6 @@ interface TripStore {
   loadTrip: (tripId: string) => Promise<Trip | null>;
 
   createTrip: (name: string, memberNames: string[], treasurerIndex?: number, currency?: string) => Promise<string>;
-  updateTripCurrency: (tripId: string, currency: string) => Promise<void>;
   deleteTrip: (tripId: string) => Promise<void>;
   completeTrip: (tripId: string) => Promise<void>;
   reopenTrip: (tripId: string) => Promise<void>;
@@ -132,11 +131,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
 
   createTrip: async (name, memberNames, treasurerIndex, currency = 'VND') => {
     const tripId = Crypto.randomUUID();
-    const memberIds: string[] = [];
-
-    for (const memberName of memberNames) {
-      memberIds.push(Crypto.randomUUID());
-    }
+    const memberIds = memberNames.map(() => Crypto.randomUUID());
 
     const treasurerId =
       treasurerIndex !== undefined ? memberIds[treasurerIndex] : undefined;
@@ -183,11 +178,6 @@ export const useTripStore = create<TripStore>((set, get) => ({
 
   updateTreasurer: async (tripId, treasurerId) => {
     await db.updateTripTreasurer(tripId, treasurerId);
-    await get().loadTrip(tripId);
-  },
-
-  updateTripCurrency: async (tripId, currency) => {
-    await db.updateTripCurrency(tripId, currency);
     await get().loadTrip(tripId);
   },
 

@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Member } from '@/utils/types';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
@@ -16,42 +15,51 @@ interface MemberSelectorProps {
 
 const MemberSelector: React.FC<MemberSelectorProps> = React.memo(
   ({ members, selected, onToggle, onSelectAll, onDeselectAll }) => {
-    const allSelected = selected.length === members.length;
+    const canSelectAll = selected.length < members.length;
+    const canDeselectAll = selected.length > 0;
     const { colors } = useAppTheme();
     const { t } = useTranslation();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.label}>{t('components.participants_count', { selected: selected.length, total: members.length })}</Text>
-          <TouchableOpacity
-            onPress={allSelected ? onDeselectAll : onSelectAll}
-            hitSlop={8}
-          >
-            <Text style={styles.toggleAll}>
-              {allSelected ? t('components.deselect_all') : t('components.select_all')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.gridContainer}>
-          {members.map((member) => {
-            const isSelected = selected.includes(member.id);
-            return (
-              <TouchableOpacity
-                key={member.id}
-                style={[styles.gridItem, isSelected && styles.gridItemSelected]}
-                onPress={() => onToggle(member.id)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.gridItemContent}>
+        <Text style={styles.label}>{t('components.participants_count', { selected: selected.length, total: members.length })}</Text>
+        <View style={styles.columns}>
+          <View style={styles.membersColumn}>
+            {members.map((member) => {
+              const isSelected = selected.includes(member.id);
+              return (
+                <TouchableOpacity
+                  key={member.id}
+                  style={[styles.gridItem, isSelected && styles.gridItemSelected]}
+                  onPress={() => onToggle(member.id)}
+                  activeOpacity={0.7}
+                >
                   <Text style={[styles.gridItemText, isSelected && styles.gridItemTextSelected]} numberOfLines={1}>
                     {member.name}
                   </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <View style={styles.actionsColumn}>
+            <TouchableOpacity
+              style={[styles.actionButton, !canSelectAll && styles.actionButtonDisabled]}
+              onPress={onSelectAll}
+              disabled={!canSelectAll}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.actionText, !canSelectAll && styles.actionTextDisabled]}>{t('components.select_all')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, !canDeselectAll && styles.actionButtonDisabled]}
+              onPress={onDeselectAll}
+              disabled={!canDeselectAll}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.actionText, !canDeselectAll && styles.actionTextDisabled]}>{t('components.deselect_all')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -65,52 +73,63 @@ const createStyles = (colors: ThemeColors) =>
     container: {
       marginBottom: Spacing.lg,
     },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: Spacing.sm,
-    },
     label: {
       fontSize: FontSize.sm,
       fontWeight: FontWeight.medium,
       color: colors.textSecondary,
+      marginBottom: Spacing.sm,
     },
-    toggleAll: {
-      fontSize: FontSize.sm,
-      color: colors.primaryLight,
-      fontWeight: FontWeight.medium,
+    columns: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: Spacing.md,
     },
-    gridContainer: {
+    membersColumn: {
+      flex: 2,
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: Spacing.sm,
-      marginTop: Spacing.xs,
+    },
+    actionsColumn: {
+      flex: 1,
+      gap: Spacing.sm,
+    },
+    actionButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: BorderRadius.md,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.sm,
+    },
+    actionButtonDisabled: {
+      borderColor: colors.border,
+    },
+    actionText: {
+      fontSize: FontSize.sm,
+      color: colors.primaryLight,
+      fontWeight: FontWeight.medium,
+      textAlign: 'center',
+    },
+    actionTextDisabled: {
+      color: colors.textMuted,
     },
     gridItem: {
-      minWidth: '31%',
-      maxWidth: '48%',
-      marginBottom: Spacing.sm,
-      flexDirection: 'row',
+      maxWidth: '100%',
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: BorderRadius.md,
-      paddingHorizontal: Spacing.sm,
+      paddingHorizontal: Spacing.md,
       paddingVertical: Spacing.sm,
     },
     gridItemSelected: {
       borderColor: colors.primary,
       backgroundColor: colors.primary,
-    },
-    gridItemContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: Spacing.xs,
-      flex: 1,
     },
     gridItemText: {
       fontSize: FontSize.sm,

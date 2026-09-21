@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getInitials, getMemberColor } from '@/utils/calculator';
-import { ThemeColors, FontSize, FontWeight } from '@/constants/theme';
+import { FontWeight } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/useAppTheme';
 
 interface UserAvatarProps {

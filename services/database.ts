@@ -74,13 +74,13 @@ async function initTables(database: SQLite.SQLiteDatabase): Promise<void> {
 
   try {
     await database.execAsync('ALTER TABLE expenses ADD COLUMN paid_by TEXT;');
-  } catch (error) {
+  } catch {
     // Column might already exist, ignore error
   }
 
   try {
     await database.execAsync("ALTER TABLE trips ADD COLUMN currency TEXT DEFAULT 'VND';");
-  } catch (error) {
+  } catch {
     // Column might already exist, ignore error
   }
 }
@@ -209,17 +209,6 @@ export async function insertTrip(
     'INSERT INTO trips (id, name, treasurer_id, is_completed, created_at, currency) VALUES (?, ?, ?, 0, ?, ?)',
     [id, name, treasurerId ?? null, Date.now(), currency],
   );
-}
-
-export async function updateTripCurrency(
-  tripId: string,
-  currency: string,
-): Promise<void> {
-  const database = await getDatabase();
-  await database.runAsync('UPDATE trips SET currency = ? WHERE id = ?', [
-    currency,
-    tripId,
-  ]);
 }
 
 export async function updateTripCompleted(
