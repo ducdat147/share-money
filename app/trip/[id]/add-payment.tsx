@@ -15,6 +15,7 @@ import { useDialog } from '@/components/DialogProvider';
 import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { formatCurrency } from '@/utils/calculator';
+import { parseAmountInput } from '@/utils/currency';
 import { Member } from '@/utils/types';
 
 export default function AddPaymentScreen() {
@@ -49,10 +50,10 @@ export default function AddPaymentScreen() {
     }
   }, [paymentId, trip]);
 
-  const amount = useMemo(() => {
-    const parsed = parseFloat(amountText.replace(/,/g, ''));
-    return isNaN(parsed) ? 0 : parsed;
-  }, [amountText]);
+  const amount = useMemo(
+    () => parseAmountInput(amountText, trip?.currency),
+    [amountText, trip?.currency],
+  );
 
   const allMembers = useMemo(() => {
     if (!trip) return [];

@@ -1,13 +1,21 @@
 import { create } from 'zustand';
 import * as Crypto from 'expo-crypto';
-import { Trip } from '@/utils/types';
+import { Trip, TripSummary } from '@/utils/types';
 import * as db from '@/services/database';
+
+export const SUMMARY_PAGE_SIZE = 20;
 
 interface TripStore {
   trips: Trip[];
-  isLoading: boolean;
+  tripSummaries: TripSummary[];
+  tripCounts: { total: number; active: number };
+  hasMoreSummaries: boolean;
+  isLoadingSummaries: boolean;
+  isLoadingMoreSummaries: boolean;
 
-  loadTrips: () => Promise<void>;
+  // `'all'` skips the LIMIT — used while searching, which filters in memory.
+  loadTripSummaries: (limit: number | 'all') => Promise<void>;
+  loadMoreSummaries: () => Promise<void>;
   loadTrip: (tripId: string) => Promise<Trip | null>;
 
   createTrip: (name: string, memberNames: string[], treasurerIndex?: number, currency?: string) => Promise<string>;
@@ -56,23 +64,67 @@ interface TripStore {
 
 export const useTripStore = create<TripStore>((set, get) => ({
   trips: [],
-  isLoading: false,
+  tripSummaries: [],
+  tripCounts: { total: 0, active: 0 },
+  hasMoreSummaries: false,
+  isLoadingSummaries: false,
+  isLoadingMoreSummaries: false,
 
-  loadTrips: async () => {
-    set({ isLoading: true });
+  loadTripSummaries: async (limit) => {
+    set({ isLoadingSummaries: true });
     try {
-      const trips = await db.getAllTrips();
-      set({ trips });
+      const summaries = await db.getTripSummaries({
+        limit: limit === 'all' ? undefined : limit,
+      });
+      const counts = await db.getTripCounts();
+      set({
+        tripSummaries: summaries,
+        tripCounts: counts,
+        hasMoreSummaries: summaries.length < counts.total,
+      });
     } finally {
-      set({ isLoading: false });
+      set({ isLoadingSummaries: false });
+    }
+  },
+
+  loadMoreSummaries: async () => {
+    // FlatList fires onEndReached repeatedly, so the guard lives here.
+    const { hasMoreSummaries, isLoadingSummaries, isLoadingMoreSummaries, tripSummaries } = get();
+    const last = tripSummaries[tripSummaries.length - 1];
+    if (!hasMoreSummaries || isLoadingSummaries || isLoadingMoreSummaries || !last) return;
+
+    set({ isLoadingMoreSummaries: true });
+    try {
+      const next = await db.getTripSummaries({
+        limit: SUMMARY_PAGE_SIZE,
+        cursor: { createdAt: last.createdAt, id: last.id },
+      });
+      set((state) => {
+        // A focus refresh may have replaced the list while this page was in
+        // flight; appending onto it would duplicate rows.
+        if (state.tripSummaries[state.tripSummaries.length - 1]?.id !== last.id) {
+          return state;
+        }
+        const merged = [...state.tripSummaries, ...next];
+        return {
+          tripSummaries: merged,
+          hasMoreSummaries: merged.length < state.tripCounts.total,
+        };
+      });
+    } finally {
+      set({ isLoadingMoreSummaries: false });
     }
   },
 
   loadTrip: async (tripId: string) => {
     const trip = await db.getTripById(tripId);
     if (trip) {
+      // Upsert: the home list only holds summaries, so a trip opened from it is
+      // usually absent from `trips` and a map() alone would drop it.
       set((state) => ({
-        trips: state.trips.map((t) => (t.id === tripId ? trip : t)),
+        trips: state.trips.some((t) => t.id === tripId)
+          ? state.trips.map((t) => (t.id === tripId ? trip : t))
+          : [...state.trips, trip],
       }));
     }
     return trip;
@@ -95,15 +147,28 @@ export const useTripStore = create<TripStore>((set, get) => ({
       await db.insertMember(memberIds[i], tripId, memberNames[i]);
     }
 
-    await get().loadTrips();
+    // The screen navigates straight into the trip, which hydrates it via
+    // loadTrip; the home list refreshes its summaries on focus.
     return tripId;
   },
 
   deleteTrip: async (tripId) => {
     await db.deleteTrip(tripId);
-    set((state) => ({
-      trips: state.trips.filter((t) => t.id !== tripId),
-    }));
+    set((state) => {
+      const removed = state.tripSummaries.find((s) => s.id === tripId);
+      return {
+        trips: state.trips.filter((t) => t.id !== tripId),
+        tripSummaries: state.tripSummaries.filter((s) => s.id !== tripId),
+        tripCounts: removed
+          ? {
+              total: state.tripCounts.total - 1,
+              active: removed.isCompleted
+                ? state.tripCounts.active
+                : state.tripCounts.active - 1,
+            }
+          : state.tripCounts,
+      };
+    });
   },
 
   completeTrip: async (tripId) => {

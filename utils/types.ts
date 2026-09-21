@@ -10,6 +10,19 @@ export interface Trip {
   createdAt: number;
 }
 
+// Row shape backing the home list: aggregates only, no members/expenses/payments.
+export interface TripSummary {
+  id: string;
+  name: string;
+  currency?: 'VND' | 'USD';
+  isCompleted: boolean;
+  createdAt: number;
+  memberCount: number;
+  expenseCount: number;
+  totalExpense: number;
+  treasurerName?: string;
+}
+
 export interface Member {
   id: string;
   tripId: string;

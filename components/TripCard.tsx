@@ -1,24 +1,22 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Trip } from '@/utils/types';
+import { TripSummary } from '@/utils/types';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
-import { formatCurrency, getTotalExpenses } from '@/utils/calculator';
+import { formatCurrency } from '@/utils/calculator';
 
 import ScalePressable from './ScalePressable';
 import * as Haptics from 'expo-haptics';
 
 interface TripCardProps {
-  trip: Trip;
+  trip: TripSummary;
   onPress: () => void;
   onDelete?: () => void;
 }
 
 const TripCard: React.FC<TripCardProps> = React.memo(({ trip, onPress, onDelete }) => {
-  const totalExpenses = getTotalExpenses(trip.expenses);
-  const treasurer = trip.members.find((m) => m.id === trip.treasurerId);
   const { colors } = useAppTheme();
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -61,17 +59,17 @@ const TripCard: React.FC<TripCardProps> = React.memo(({ trip, onPress, onDelete 
       <View style={styles.info}>
         <View style={styles.infoItem}>
           <Ionicons name="people-outline" size={14} color={colors.textSecondary} />
-          <Text style={styles.infoText}>{t('components.member_count', { count: trip.members.length })}</Text>
+          <Text style={styles.infoText}>{t('components.member_count', { count: trip.memberCount })}</Text>
         </View>
         <View style={styles.infoItem}>
           <Ionicons name="receipt-outline" size={14} color={colors.textSecondary} />
-          <Text style={styles.infoText}>{t('components.expense_count', { count: trip.expenses.length })}</Text>
+          <Text style={styles.infoText}>{t('components.expense_count', { count: trip.expenseCount })}</Text>
         </View>
-        {treasurer && (
+        {trip.treasurerName && (
           <View style={styles.infoItem}>
             <Ionicons name="wallet-outline" size={14} color={colors.primaryLight} />
             <Text style={[styles.infoText, { color: colors.primaryLight }]}>
-              {treasurer.name}
+              {trip.treasurerName}
             </Text>
           </View>
         )}
@@ -79,7 +77,7 @@ const TripCard: React.FC<TripCardProps> = React.memo(({ trip, onPress, onDelete 
 
       <View style={styles.footer}>
         <Text style={styles.totalLabel}>{t('components.total_expense')}</Text>
-        <Text style={styles.totalValue}>{formatCurrency(totalExpenses, trip.currency)}</Text>
+        <Text style={styles.totalValue}>{formatCurrency(trip.totalExpense, trip.currency)}</Text>
       </View>
     </ScalePressable>
   );

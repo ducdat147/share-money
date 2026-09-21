@@ -100,29 +100,46 @@ export default function TripDetailScreen() {
 
   const handleRemoveMember = useCallback(
     (member: Member) => {
-      const isTreasurer = member.id === trip?.treasurerId;
-      const inExpense = trip?.expenses.some((e) => e.participants.includes(member.id));
-      
-      const onConfirm = async () => {
-        if (isTreasurer) await updateTreasurer(id!, undefined);
-        await removeMember(id!, member.id);
-      };
+      if (!trip || !id) return;
+      const isTreasurer = member.id === trip.treasurerId;
 
-      let title = t('trip_detail.alert_remove_member_title');
-      let message = t('trip_detail.alert_remove_member_desc', { name: member.name });
-
-      if (isTreasurer) {
-        title = t('trip_detail.alert_remove_treasurer_title', { defaultValue: 'Xóa thủ quỹ' });
-        message = t('trip_detail.alert_remove_treasurer_desc', { name: member.name, defaultValue: '{{name}} đang là thủ quỹ. Xóa thành viên này sẽ gỡ bỏ vai trò thủ quỹ của chuyến đi. Tiếp tục?' });
-      } else if (inExpense) {
-        title = t('common.warning');
-        message = t('trip_detail.err_member_in_expense', { name: member.name });
+      // Deleting a member cascades away their expense_participants rows and
+      // payments, but `expenses.paid_by` has no FK and is left dangling. Either
+      // way the remaining balances stop summing to zero and the settlement list
+      // silently comes back empty, so a member with activity cannot be removed.
+      const inExpense = trip.expenses.some(
+        (e) => e.participants.includes(member.id) || e.paidBy === member.id,
+      );
+      const hasPayment = trip.payments.some((p) => p.memberId === member.id);
+      if (inExpense || hasPayment) {
+        showDialog(t('common.warning'), t('trip_detail.err_member_in_expense', { name: member.name }));
+        return;
       }
 
-      showDialog(title, message, [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.delete'), style: 'destructive', onPress: onConfirm },
-      ]);
+      // The treasurer holds every payment in the trip, and removing them also
+      // clears the role — which would leave the collected fund unattributed.
+      if (isTreasurer && trip.payments.length > 0) {
+        showDialog(t('common.warning'), t('trip_detail.err_treasurer_holds_fund', { name: member.name }));
+        return;
+      }
+
+      const onConfirm = async () => {
+        if (isTreasurer) await updateTreasurer(id, undefined);
+        await removeMember(id, member.id);
+      };
+
+      showDialog(
+        isTreasurer
+          ? t('trip_detail.alert_remove_treasurer_title')
+          : t('trip_detail.alert_remove_member_title'),
+        isTreasurer
+          ? t('trip_detail.alert_remove_treasurer_desc', { name: member.name })
+          : t('trip_detail.alert_remove_member_desc', { name: member.name }),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('common.delete'), style: 'destructive', onPress: onConfirm },
+        ],
+      );
     }, [id, trip, removeMember, updateTreasurer, showDialog, t],
   );
 
@@ -443,6 +460,7 @@ export default function TripDetailScreen() {
         member={selectedMember}
         isTreasurer={selectedMember?.id === trip.treasurerId}
         hasTreasurer={!!trip.treasurerId}
+        currencyCode={trip.currency}
         onUpdateName={handleUpdateMemberName}
         onToggleTreasurer={handleToggleTreasurer}
         onAddFund={handleAddFund}

@@ -23,6 +23,7 @@ const Palette = {
     600: '#1B4332',
   },
   sun: {
+    400: '#FFD522', // Lighter yellow — accent/warning in Dark Mode
     500: '#FFB703', // Accent - Yellow
     600: '#FB8500',
   },

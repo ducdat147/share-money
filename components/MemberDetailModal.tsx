@@ -16,6 +16,7 @@ import { Member } from '@/utils/types';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { CurrencyCode, parseAmountInput } from '@/utils/currency';
 import UserAvatar from './UserAvatar';
 
 interface MemberDetailModalProps {
@@ -24,6 +25,7 @@ interface MemberDetailModalProps {
   member: Member | null;
   isTreasurer: boolean;
   hasTreasurer: boolean;
+  currencyCode?: CurrencyCode;
   onUpdateName: (name: string) => Promise<void>;
   onToggleTreasurer: () => Promise<void>;
   onAddFund: (amount: number) => Promise<void>;
@@ -35,6 +37,7 @@ export default function MemberDetailModal({
   member,
   isTreasurer,
   hasTreasurer,
+  currencyCode,
   onUpdateName,
   onToggleTreasurer,
   onAddFund,
@@ -103,8 +106,8 @@ export default function MemberDetailModal({
       if (name.trim() !== member.name) {
         await onUpdateName(name.trim());
       }
-      const amount = parseFloat(fundAmount);
-      if (!isNaN(amount) && amount > 0) {
+      const amount = parseAmountInput(fundAmount, currencyCode);
+      if (amount > 0) {
         await onAddFund(amount);
       }
       handleClose();

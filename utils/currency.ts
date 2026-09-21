@@ -46,6 +46,50 @@ export function formatCurrency(amount: number, currencyCode: CurrencyCode = DEFA
 }
 
 /**
+ * Parse what a user typed into an amount field.
+ * `formatCurrency` renders VND as "1.000.000 đ", so users retype that form —
+ * a bare parseFloat would read it back as 1. Both the vi-VN ("." groups) and
+ * en-US ("," groups) conventions have to survive the round trip.
+ */
+export function parseAmountInput(
+  text: string,
+  currencyCode: CurrencyCode = DEFAULT_CURRENCY,
+): number {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+
+  // Kept so a typed "-5" still parses negative and fails the caller's `<= 0`
+  // check, instead of being silently accepted as 5.
+  const sign = trimmed.startsWith('-') ? -1 : 1;
+  const body = trimmed.replace(/[^\d.,]/g, '');
+  if (!body) return 0;
+
+  let normalized: string;
+  if (CURRENCIES[currencyCode].decimals === 0) {
+    // No fractional part exists, so every separator is a grouping mark.
+    normalized = body.replace(/[.,]/g, '');
+  } else {
+    // The last separator is a decimal point only if it looks like one: 1-2
+    // trailing digits, and not repeated earlier (which would make it a
+    // grouping mark, as in "1.000.000").
+    const lastSep = Math.max(body.lastIndexOf('.'), body.lastIndexOf(','));
+    const fractionLength = body.length - lastSep - 1;
+    const isDecimalPoint =
+      lastSep >= 0 &&
+      fractionLength >= 1 &&
+      fractionLength <= 2 &&
+      body.indexOf(body[lastSep]) === lastSep;
+
+    normalized = isDecimalPoint
+      ? `${body.slice(0, lastSep).replace(/[.,]/g, '')}.${body.slice(lastSep + 1)}`
+      : body.replace(/[.,]/g, '');
+  }
+
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? 0 : sign * parsed;
+}
+
+/**
  * Round a number according to the currency's precision rules
  * e.g. VND rounds to 0 decimals, USD rounds to 2 decimals
  */

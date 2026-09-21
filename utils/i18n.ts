@@ -3,13 +3,15 @@ import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import en from '../locales/en.json';
-import vi from '../locales/vi.json';
+import en from '../locales/en/common.json';
+import fr from "../locales/fr/common.json";
+import vi from '../locales/vi/common.json';
 
 const ASYNC_LANGUAGE_KEY = 'user-language';
 
 const resources = {
   en: { translation: en },
+  fr: { translation: fr },
   vi: { translation: vi },
 };
 

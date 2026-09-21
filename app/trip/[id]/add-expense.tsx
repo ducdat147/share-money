@@ -16,6 +16,7 @@ import { useDialog } from '@/components/DialogProvider';
 import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { formatCurrency, roundCurrency } from '@/utils/calculator';
+import { parseAmountInput } from '@/utils/currency';
 
 export default function AddExpenseScreen() {
   const { id, expenseId } = useLocalSearchParams<{ id: string; expenseId?: string }>();
@@ -51,10 +52,10 @@ export default function AddExpenseScreen() {
     }
   }, [expenseId, trip]);
 
-  const amount = useMemo(() => {
-    const parsed = parseFloat(amountText.replace(/,/g, ''));
-    return isNaN(parsed) ? 0 : parsed;
-  }, [amountText]);
+  const amount = useMemo(
+    () => parseAmountInput(amountText, trip?.currency),
+    [amountText, trip?.currency],
+  );
 
   const perPerson = useMemo(
     () => (selectedMembers.length > 0 ? amount / selectedMembers.length : 0),

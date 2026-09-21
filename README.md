@@ -13,7 +13,7 @@ A mobile application built with **React Native** & **Expo SDK 54**, designed to 
   - **Optimal (Default)**: Minimizes the number of transactions using a Greedy + Subset Sum solver.
   - **Centralized**: Routes all debts through a designated **Middleman** (usually the Treasurer) for organized collection and redistribution.
 - **Shareable Results**: Export the settlement transaction list as a high-quality **JPEG image** to share via Zalo, Messenger, or other apps.
-- **Symmetric Rounding System**: 
+- **Symmetric Rounding System**:
   - Uses high-precision math during intermediate calculations to avoid division anomalies.
   - Implements symmetric rounding half away from zero to ensure correct presentation for both debts and refunds.
 - **Detailed Breakdowns**: The summary screen provides a per-member list of "Directly Paid" (advanced) expenses for full transparency.
@@ -38,6 +38,7 @@ A mobile application built with **React Native** & **Expo SDK 54**, designed to 
 ## 📦 Getting Started & Local Development
 
 ### 📋 Prerequisites
+
 - **Node.js** (v18 or newer recommended).
 - **pnpm** (preferred) or npm.
 - **Expo Go** app installed on your physical device, or a set-up emulator.
@@ -45,20 +46,23 @@ A mobile application built with **React Native** & **Expo SDK 54**, designed to 
 ### ⚙️ Installation & Running
 
 1. **Clone the repository:**
-   ```bash
-   git clone git@github.com:ducdat147/share-money.git
-   cd share_money
-   ```
+
+```bash
+git clone git@github.com:ducdat147/share-money.git
+cd share_money
+```
 
 2. **Install dependencies:**
-   ```bash
-   pnpm install
-   ```
+
+```bash
+pnpm install
+```
 
 3. **Start the Metro Bundler:**
-   ```bash
-   npx expo start -c
-   ```
+
+```bash
+npx expo start -c
+```
 
 ---
 
@@ -67,26 +71,82 @@ A mobile application built with **React Native** & **Expo SDK 54**, designed to 
 The project is pre-configured with **Expo Application Services (EAS)** configuration in `eas.json` for cloud builds. You can also build binaries locally.
 
 ### Prerequisites for EAS Build
-1. Install EAS CLI globally: `npm install -g eas-cli`
-2. Log in to your Expo account: `eas login`
-3. Initialize project: `eas project:init` (if not configured)
+
+1. Install EAS CLI globally:
+
+```bash
+npm install -g eas-cli
+```
+
+2. Log in to your Expo account:
+
+```bash
+eas login
+```
+
+3. Initialize project:
+
+```bash
+eas project:init
+```
+
+(if not configured)
 
 ### 🤖 Android Builds
+
 - **Cloud Build (Recommended):**
-  - APK for testing: `eas build -p android --profile preview`
-  - AAB for Store: `eas build -p android --profile production`
+  - APK for testing:
+
+  ```bash
+  eas build -p android --profile preview
+  ```
+
+  - AAB for Store:
+
+  ```bash
+  eas build -p android --profile production
+  ```
+
 - **Local Build:**
-  1. `npx expo prebuild --platform android`
-  2. `npx expo run:android`
+
+  ```bash
+  npx expo prebuild --platform android
+  ```
+
+  ```bash
+  npx expo run:android
+  ```
 
 ### 🍎 iOS Builds
+
 - **Cloud Build (Recommended):**
-  - Simulator build: `eas build -p ios --profile preview-simulator`
-  - Ad-Hoc build: `eas build -p ios --profile preview`
-  - IPA for Store: `eas build -p ios --profile production`
+  - Simulator build:
+
+  ```bash
+  eas build -p ios --profile preview-simulator
+  ```
+
+  - Ad-Hoc build:
+
+  ```bash
+  eas build -p ios --profile preview
+  ```
+
+  - IPA for Store:
+
+  ```bash
+  eas build -p ios --profile production
+  ```
+
 - **Local Build:**
-  1. `npx expo prebuild --platform ios`
-  2. `npx expo run:ios`
+
+  ```bash
+  npx expo prebuild --platform ios
+  ```
+
+  ```bash
+  npx expo run:ios
+  ```
 
 ---
 

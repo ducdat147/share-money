@@ -1,16 +1,24 @@
 import * as SQLite from 'expo-sqlite';
-import { Trip, Member, Expense, Payment } from '@/utils/types';
+import { Trip, TripSummary, Member, Expense, Payment } from '@/utils/types';
 
 const DB_NAME = 'share_money.db';
 
-let db: SQLite.SQLiteDatabase | null = null;
+// The promise itself is cached, not the instance: concurrent callers during
+// startup would otherwise each open a connection and run initTables().
+let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
-  if (!db) {
-    db = await SQLite.openDatabaseAsync(DB_NAME);
-    await initTables(db);
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const database = await SQLite.openDatabaseAsync(DB_NAME);
+      await initTables(database);
+      return database;
+    })().catch((error) => {
+      dbPromise = null; // allow a later call to retry
+      throw error;
+    });
   }
-  return db;
+  return dbPromise;
 }
 
 async function initTables(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -79,35 +87,85 @@ async function initTables(database: SQLite.SQLiteDatabase): Promise<void> {
 
 // ========== TRIPS ==========
 
-export async function getAllTrips(): Promise<Trip[]> {
+// Cursor for keyset pagination. `created_at` alone is not unique enough to be a
+// stable cursor, so `id` breaks ties — offsets would skip rows after a delete.
+export interface TripSummaryCursor {
+  createdAt: number;
+  id: string;
+}
+
+export async function getTripSummaries(options: {
+  limit?: number;
+  cursor?: TripSummaryCursor;
+} = {}): Promise<TripSummary[]> {
   const database = await getDatabase();
+  const { limit, cursor } = options;
+
+  const params: (string | number)[] = [];
+  let where = '';
+  if (cursor) {
+    where = 'WHERE (t.created_at < ? OR (t.created_at = ? AND t.id < ?))';
+    params.push(cursor.createdAt, cursor.createdAt, cursor.id);
+  }
+
+  let limitClause = '';
+  if (limit !== undefined) {
+    limitClause = 'LIMIT ?';
+    params.push(limit);
+  }
+
+  // Aggregates stay in SQL: the home list only needs counts and a total, so
+  // nothing from members/expenses/payments is carried into memory.
   const rows = await database.getAllAsync<{
     id: string;
     name: string;
-    treasurer_id: string | null;
     is_completed: number;
     created_at: number;
     currency: string | null;
-  }>('SELECT * FROM trips ORDER BY created_at DESC');
+    member_count: number;
+    expense_count: number;
+    total_expense: number;
+    treasurer_name: string | null;
+  }>(
+    `SELECT
+       t.id,
+       t.name,
+       t.is_completed,
+       t.created_at,
+       t.currency,
+       (SELECT COUNT(*) FROM members m WHERE m.trip_id = t.id) AS member_count,
+       (SELECT COUNT(*) FROM expenses e WHERE e.trip_id = t.id) AS expense_count,
+       (SELECT COALESCE(SUM(e.amount), 0) FROM expenses e WHERE e.trip_id = t.id) AS total_expense,
+       (SELECT m.name FROM members m WHERE m.id = t.treasurer_id) AS treasurer_name
+     FROM trips t
+     ${where}
+     ORDER BY t.created_at DESC, t.id DESC
+     ${limitClause}`,
+    params,
+  );
 
-  const trips: Trip[] = [];
-  for (const row of rows) {
-    const members = await getMembersByTrip(row.id);
-    const expenses = await getExpensesByTrip(row.id);
-    const payments = await getPaymentsByTrip(row.id);
-    trips.push({
-      id: row.id,
-      name: row.name,
-      treasurerId: row.treasurer_id ?? undefined,
-      isCompleted: row.is_completed === 1,
-      createdAt: row.created_at,
-      currency: (row.currency as any) || 'VND',
-      members,
-      expenses,
-      payments,
-    });
-  }
-  return trips;
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    isCompleted: row.is_completed === 1,
+    createdAt: row.created_at,
+    currency: (row.currency as any) || 'VND',
+    memberCount: row.member_count,
+    expenseCount: row.expense_count,
+    totalExpense: row.total_expense,
+    treasurerName: row.treasurer_name ?? undefined,
+  }));
+}
+
+export async function getTripCounts(): Promise<{ total: number; active: number }> {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<{ total: number; active: number }>(
+    `SELECT
+       COUNT(*) AS total,
+       COALESCE(SUM(CASE WHEN is_completed = 0 THEN 1 ELSE 0 END), 0) AS active
+     FROM trips`,
+  );
+  return { total: row?.total ?? 0, active: row?.active ?? 0 };
 }
 
 export async function getTripById(tripId: string): Promise<Trip | null> {

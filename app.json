@@ -40,7 +40,8 @@
         }
       ],
       "expo-sqlite",
-      "expo-localization"
+      "expo-localization",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
@@ -50,6 +51,7 @@
       "eas": {
         "projectId": "0fe4081c-4277-48ef-b0c5-96eefc274984"
       }
-    }
+    },
+    "owner": "ducdat147"
   }
 }
