@@ -1,0 +1,8 @@
+# pnpm 11 only reads auth/registry settings from .npmrc; everything else lives here.
+
+# Flat node_modules, required so native C++ builds don't hit the Windows 260-char path limit.
+nodeLinker: hoisted
+
+# pnpm blocks dependency build scripts by default (strictDepBuilds errors on unapproved ones).
+allowBuilds:
+  unrs-resolver: true

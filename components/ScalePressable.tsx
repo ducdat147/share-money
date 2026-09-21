@@ -16,6 +16,10 @@ interface ScalePressableProps extends PressableProps {
   haptic?: Haptics.ImpactFeedbackStyle;
 }
 
+// Style and transform must live on the same view: an absolutely positioned
+// `style` on an inner wrapper collapses the Pressable's touch area to 0px.
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 const ScalePressable: React.FC<ScalePressableProps> = ({
   children,
   scaleTo = 0.96,
@@ -52,16 +56,15 @@ const ScalePressable: React.FC<ScalePressableProps> = ({
   };
 
   return (
-    <Pressable
+    <AnimatedPressable
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onPress={onPress}
       {...props}
+      style={[style, { transform: [{ scale }] }]}
     >
-      <Animated.View style={[style, { transform: [{ scale }] }]}>
-        {children}
-      </Animated.View>
-    </Pressable>
+      {children}
+    </AnimatedPressable>
   );
 };
 

@@ -26,7 +26,9 @@ const ExpenseItem: React.FC<ExpenseItemProps> = React.memo(
       ? members.find((m: Member) => m.id === expense.paidBy)?.name ?? t('summary.treasurer')
       : t('summary.treasurer');
 
-    const perPerson = expense.amount / expense.participants.length;
+    const perPerson = expense.participants.length > 0
+      ? expense.amount / expense.participants.length
+      : 0;
     const { colors } = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 

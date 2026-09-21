@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,9 +15,9 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useTripStore } from '@/hooks/useTripStore';
+import { SUMMARY_PAGE_SIZE, useTripStore } from '@/hooks/useTripStore';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { Trip } from '@/utils/types';
+import { TripSummary } from '@/utils/types';
 import TripCard from '@/components/TripCard';
 import { useDialog } from '@/components/DialogProvider';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
@@ -32,7 +32,8 @@ const AnimatedListItem = ({ children, index }: { children: React.ReactNode; inde
     Animated.timing(animatedValue, {
       toValue: 1,
       duration: 400,
-      delay: index * 100,
+      // Capped: with paging, an uncapped index would make row 20 wait 2s.
+      delay: Math.min(index, 5) * 100,
       useNativeDriver: true,
     }).start();
   }, [index]);
@@ -51,9 +52,20 @@ const AnimatedListItem = ({ children, index }: { children: React.ReactNode; inde
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { trips, isLoading, loadTrips, deleteTrip } = useTripStore();
+  const {
+    tripSummaries,
+    tripCounts,
+    isLoadingSummaries,
+    isLoadingMoreSummaries,
+    loadTripSummaries,
+    loadMoreSummaries,
+    deleteTrip,
+  } = useTripStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [menuVisible, setMenuVisible] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const isNavigatingRef = useRef(false);
+  const isSearchingRef = useRef(false);
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { colors } = useAppTheme();
@@ -62,15 +74,50 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadTrips();
-    }, [loadTrips]),
+      // Screen is back on top: release the lock taken by the last navigation.
+      isNavigatingRef.current = false;
+      // Read the store imperatively: depending on the loaded count would make
+      // this effect re-run on its own result. Refreshing the pages already on
+      // screen (instead of just the first) keeps the scroll position usable.
+      const loaded = useTripStore.getState().tripSummaries.length;
+      loadTripSummaries(
+        isSearchingRef.current ? 'all' : Math.max(SUMMARY_PAGE_SIZE, loaded),
+      ).finally(() => setHasLoadedOnce(true));
+    }, [loadTripSummaries]),
+  );
+
+  useEffect(() => {
+    const searching = searchQuery.trim().length > 0;
+    if (searching === isSearchingRef.current) return;
+    isSearchingRef.current = searching;
+    // Search stays in memory because SQLite's LIKE only folds ASCII case — a
+    // lowercase "đà lạt" would never match "Đà Lạt" in SQL. So entering search
+    // mode pulls every summary once, and leaving it drops back to one page.
+    loadTripSummaries(searching ? 'all' : SUMMARY_PAGE_SIZE);
+  }, [searchQuery, loadTripSummaries]);
+
+  // Without this lock, mashing a target stacks duplicate screens (several
+  // `trip/create` modals, or the same trip opened twice).
+  const handleCreateTrip = useCallback(() => {
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+    router.push('/trip/create');
+  }, [router]);
+
+  const handleOpenTrip = useCallback(
+    (tripId: string) => {
+      if (isNavigatingRef.current) return;
+      isNavigatingRef.current = true;
+      router.push(`/trip/${tripId}`);
+    },
+    [router],
   );
 
   const filteredTrips = useMemo(() => {
-    if (!searchQuery.trim()) return trips;
+    if (!searchQuery.trim()) return tripSummaries;
     const q = searchQuery.trim().toLowerCase();
-    return trips.filter((trip) => trip.name.toLowerCase().includes(q));
-  }, [trips, searchQuery]);
+    return tripSummaries.filter((trip) => trip.name.toLowerCase().includes(q));
+  }, [tripSummaries, searchQuery]);
 
   const handleDeleteTrip = useCallback(
     (tripId: string, tripName: string) => {
@@ -87,20 +134,36 @@ export default function HomeScreen() {
     [deleteTrip, t, showDialog],
   );
 
+  const handleEndReached = useCallback(() => {
+    // While searching everything is already loaded; paging would fight the filter.
+    if (isSearchingRef.current) return;
+    loadMoreSummaries();
+  }, [loadMoreSummaries]);
+
   const renderTrip = useCallback(
-    ({ item, index }: { item: Trip; index: number }) => (
+    ({ item, index }: { item: TripSummary; index: number }) => (
       <AnimatedListItem index={index}>
         <TripCard
           trip={item}
-          onPress={() => router.push(`/trip/${item.id}`)}
+          onPress={() => handleOpenTrip(item.id)}
           onDelete={() => handleDeleteTrip(item.id, item.name)}
         />
       </AnimatedListItem>
     ),
-    [router, handleDeleteTrip],
+    [handleOpenTrip, handleDeleteTrip],
   );
 
-  const keyExtractor = useCallback((item: Trip) => item.id, []);
+  const keyExtractor = useCallback((item: TripSummary) => item.id, []);
+
+  const renderFooter = useCallback(
+    () =>
+      isLoadingMoreSummaries ? (
+        <View style={styles.footerLoading}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : null,
+    [isLoadingMoreSummaries, styles, colors],
+  );
 
   const renderEmpty = useCallback(
     () => (
@@ -141,7 +204,9 @@ export default function HomeScreen() {
   );
 
 
-  if (isLoading) {
+  // Only the very first load takes over the screen — later refreshes keep the
+  // list (and the FAB) mounted so taps are never swallowed by the spinner.
+  if (isLoadingSummaries && !hasLoadedOnce) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -195,12 +260,15 @@ export default function HomeScreen() {
         keyExtractor={keyExtractor}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
         showsVerticalScrollIndicator={false}
       />
 
       <ScalePressable
         style={[styles.fab, { bottom: Spacing.xxl + insets.bottom }]}
-        onPress={() => router.push('/trip/create')}
+        onPress={handleCreateTrip}
         haptic={Haptics.ImpactFeedbackStyle.Heavy}
       >
         <Ionicons name="add" size={28} color={colors.onPrimary} />
@@ -253,8 +321,8 @@ export default function HomeScreen() {
             {/* Stats */}
             <View style={styles.menuStats}>
               <Text style={styles.menuStatsText}>
-                {t('home.stats_trips', { count: trips.length })} •{' '}
-                {t('home.stats_active', { count: trips.filter((tr) => !tr.isCompleted).length })}
+                {t('home.stats_trips', { count: tripCounts.total })} •{' '}
+                {t('home.stats_active', { count: tripCounts.active })}
               </Text>
             </View>
           </View>
@@ -316,6 +384,10 @@ const createStyles = (colors: ThemeColors) =>
     listContent: {
       paddingHorizontal: Spacing.lg,
       flexGrow: 1,
+    },
+    footerLoading: {
+      paddingVertical: Spacing.lg,
+      alignItems: 'center',
     },
     emptyContainer: {
       flex: 1,

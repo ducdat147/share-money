@@ -25,11 +25,11 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <CustomHeader title={t('settings.title')} />
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <CustomHeader title={t("settings.title")} />
       <View style={styles.content}>
         {/* Appearance Section */}
-        <Text style={styles.sectionTitle}>{t('settings.appearance')}</Text>
+        <Text style={styles.sectionTitle}>{t("settings.appearance")}</Text>
         {themeOptions.map((opt) => (
           <TouchableOpacity
             key={opt.mode}
@@ -38,7 +38,11 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.optionLeft}>
-              <Ionicons name={opt.icon} size={20} color={colors.textSecondary} />
+              <Ionicons
+                name={opt.icon}
+                size={20}
+                color={colors.textSecondary}
+              />
               <Text style={styles.optionText}>{t(opt.labelKey)}</Text>
             </View>
             {themeMode === opt.mode && (
@@ -48,29 +52,42 @@ export default function SettingsScreen() {
         ))}
 
         {/* Language Section */}
-        <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
+        <Text style={styles.sectionTitle}>{t("settings.language")}</Text>
         <TouchableOpacity
           style={styles.optionRow}
-          onPress={() => changeLanguage('vi')}
+          onPress={() => changeLanguage("vi")}
           activeOpacity={0.7}
         >
           <View style={styles.optionLeft}>
-            <Text style={styles.optionText}>{t('settings.language_vi')}</Text>
+            <Text style={styles.optionText}>{t("settings.language_vi")}</Text>
           </View>
-          {currentLang === 'vi' && (
+          {currentLang === "vi" && (
             <Ionicons name="checkmark" size={24} color={colors.primary} />
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.optionRow}
-          onPress={() => changeLanguage('en')}
+          onPress={() => changeLanguage("fr")}
           activeOpacity={0.7}
         >
           <View style={styles.optionLeft}>
-            <Text style={styles.optionText}>{t('settings.language_en')}</Text>
+            <Text style={styles.optionText}>{t("settings.language_fr")}</Text>
           </View>
-          {currentLang === 'en' && (
+          {currentLang === "fr" && (
+            <Ionicons name="checkmark" size={24} color={colors.primary} />
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.optionRow}
+          onPress={() => changeLanguage("en")}
+          activeOpacity={0.7}
+        >
+          <View style={styles.optionLeft}>
+            <Text style={styles.optionText}>{t("settings.language_en")}</Text>
+          </View>
+          {currentLang === "en" && (
             <Ionicons name="checkmark" size={24} color={colors.primary} />
           )}
         </TouchableOpacity>
