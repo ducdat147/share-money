@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useState } from 'react';
 import { Appearance, ColorSchemeName } from 'react-native';
-import { DarkColors, LightColors, ThemeColors, ThemeMode } from '@/constants/theme';
+import { DarkColors, LightColors, ThemeColors } from '@/constants/theme';
 import { useThemeStore } from './useThemeStore';
 
 export function useAppTheme() {

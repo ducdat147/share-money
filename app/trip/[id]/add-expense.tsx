@@ -85,9 +85,10 @@ export default function AddExpenseScreen() {
 
   const handleSubmit = useCallback(async () => {
     const desc = description.trim();
-    if (!desc) { showDialog(t('common.error'), t('create_trip.err_empty_name')); return; }
+    if (!desc) { showDialog(t('common.error'), t('add_expense.err_no_description')); return; }
     if (amount <= 0) { showDialog(t('common.error'), t('add_payment.err_invalid_amount')); return; }
-    if (selectedMembers.length === 0) { showDialog(t('common.error'), t('add_expense.err_fail')); return; }
+    if (!payerMember) { showDialog(t('common.error'), t('add_expense.err_no_payer')); return; }
+    if (selectedMembers.length === 0) { showDialog(t('common.error'), t('add_expense.err_no_participants')); return; }
 
     setIsSubmitting(true);
     try {
@@ -97,12 +98,12 @@ export default function AddExpenseScreen() {
         await addExpense(id!, desc, amount, selectedMembers, paidBy);
       }
       router.back();
-    } catch (error) {
+    } catch {
       showDialog(t('common.error'), t('add_expense.err_fail'));
     } finally {
       setIsSubmitting(false);
     }
-  }, [description, amount, selectedMembers, paidBy, id, expenseId, updateExpense, addExpense, router]);
+  }, [description, amount, payerMember, selectedMembers, paidBy, id, expenseId, updateExpense, addExpense, router]);
 
   if (!trip) return null;
 
@@ -199,7 +200,7 @@ export default function AddExpenseScreen() {
           title={isSubmitting ? t('add_expense.submitting') : (expenseId ? t('add_expense.update_btn') : t('add_expense.submit'))}
           icon="checkmark-circle"
           onPress={handleSubmit}
-          disabled={isSubmitting || amount <= 0 || selectedMembers.length === 0}
+          disabled={isSubmitting || !description.trim() || amount <= 0 || !payerMember || selectedMembers.length === 0}
         />
       </KeyboardAvoidingView>
 
@@ -291,8 +292,6 @@ const createStyles = (colors: ThemeColors) =>
       borderWidth: 1, borderColor: colors.border,
     },
     dropdownSelected: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-    memberAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surfaceElevated, justifyContent: 'center', alignItems: 'center' },
-    memberAvatarTreasurer: { backgroundColor: colors.accent },
     dropdownSelectedText: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
     dropdownValueText: { fontSize: FontSize.md, color: colors.text, fontWeight: FontWeight.medium },
     dropdownBadge: { backgroundColor: colors.accent, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: FontSize.xs, color: '#fff', fontWeight: FontWeight.bold, overflow: 'hidden' },

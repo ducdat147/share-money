@@ -4,11 +4,11 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomHeader from '@/components/CustomHeader';
 import { useTripStore } from '@/hooks/useTripStore';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { Trip, Expense, Payment, Member } from '@/utils/types';
+import { Expense, Payment, Member } from '@/utils/types';
 import ExpenseItem from '@/components/ExpenseItem';
 import PaymentItem from '@/components/PaymentItem';
 import UserAvatar from '@/components/UserAvatar';
@@ -23,13 +23,12 @@ type TabType = 'expenses' | 'payments' | 'members';
 export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { colors } = useAppTheme();
   const { showDialog } = useDialog();
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const {
-    trips, loadTrip, removeExpense, removePayment, completeTrip, deleteTrip, addMember, removeMember, updateTreasurer, updateTripCurrency, updateMemberName, addPayment,
+    trips, loadTrip, removeExpense, removePayment, completeTrip, deleteTrip, addMember, removeMember, updateTreasurer, updateMemberName, addPayment,
   } = useTripStore();
 
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
@@ -143,23 +142,6 @@ export default function TripDetailScreen() {
     }, [id, trip, removeMember, updateTreasurer, showDialog, t],
   );
 
-  const handleSetTreasurer = useCallback((member: Member) => {
-    if (trip?.isCompleted || !id) return;
-    
-    if (trip?.treasurerId === member.id) {
-      showDialog(t('trip_detail.alert_unset_treasurer_title', { defaultValue: 'Bỏ quyền thủ quỹ' }), t('trip_detail.alert_unset_treasurer_desc', { name: member.name, defaultValue: 'Bạn muốn bỏ quyền thủ quỹ của {{name}}?' }), [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.confirm'), onPress: () => updateTreasurer(id, undefined) },
-      ]);
-      return;
-    }
-
-    showDialog(t('trip_detail.alert_change_treasurer_title'), t('trip_detail.alert_change_treasurer_desc', { name: member.name }), [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.confirm'), onPress: () => updateTreasurer(id, member.id) },
-    ]);
-  }, [trip, id, updateTreasurer, showDialog, t]);
-
   const handleMemberPress = useCallback((member: Member) => {
     setSelectedMember(member);
     setIsMemberModalVisible(true);
@@ -199,28 +181,6 @@ export default function TripDetailScreen() {
       { text: t('common.delete'), style: 'destructive', onPress: async () => { await deleteTrip(trip.id); router.back(); } },
     ]);
   }, [trip, deleteTrip, router, showDialog, t]);
-
-  const handleChangeCurrency = useCallback(() => {
-    if (!trip || !id) return;
-    const nextCurrency = trip.currency === 'USD' ? 'VND' : 'USD';
-    showDialog(
-      t('trip_detail.change_currency_title', { defaultValue: 'Đổi đơn vị tiền tệ' }),
-      t('trip_detail.change_currency_desc', {
-        from: trip.currency || 'VND',
-        to: nextCurrency,
-        defaultValue: 'Bạn có muốn chuyển đổi đơn vị tiền tệ của chuyến đi này từ {{from}} sang {{to}}? Các số tiền đã nhập sẽ được giữ nguyên và đổi cách hiển thị.'
-      }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.confirm'),
-          onPress: async () => {
-            await updateTripCurrency(id, nextCurrency);
-          }
-        },
-      ]
-    );
-  }, [trip, id, updateTripCurrency, showDialog, t]);
 
   const renderExpense = useCallback(
     ({ item }: { item: Expense }) => (
@@ -337,11 +297,11 @@ export default function TripDetailScreen() {
       <CustomHeader
         title={trip.name}
         rightAction={
-          <TouchableOpacity onPress={handleChangeCurrency} hitSlop={8} style={styles.currencyToggleBtn}>
-            <Text style={styles.currencyToggleText}>
+          <View style={styles.currencyBadge}>
+            <Text style={styles.currencyBadgeText}>
               {trip.currency || 'VND'}
             </Text>
-          </TouchableOpacity>
+          </View>
         }
       />
       {/* Stats Header */}
@@ -397,7 +357,7 @@ export default function TripDetailScreen() {
           ListEmptyComponent={<View style={styles.emptyTab}><Text style={styles.emptyTabText}>{t('trip_detail.empty_payments')}</Text></View>}
         />
       ) : (
-        <FlatList data={trip.members} renderItem={renderMember} keyExtractor={(item) => item.id} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}
+        <FlatList data={trip.members} renderItem={renderMember} keyExtractor={(item) => item.id} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             !trip.isCompleted ? (
               <View style={styles.addMemberRow}>
@@ -472,7 +432,7 @@ export default function TripDetailScreen() {
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    currencyToggleBtn: {
+    currencyBadge: {
       paddingHorizontal: Spacing.sm,
       paddingVertical: 4,
       borderRadius: BorderRadius.sm,
@@ -481,7 +441,7 @@ const createStyles = (colors: ThemeColors) =>
       borderColor: colors.border,
       marginRight: Spacing.xs,
     },
-    currencyToggleText: {
+    currencyBadgeText: {
       fontSize: FontSize.xs,
       fontWeight: 'bold',
       color: colors.primary,
@@ -525,11 +485,6 @@ const createStyles = (colors: ThemeColors) =>
     memberHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     memberLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flex: 1 },
     memberActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-    memberAvatar: {
-      width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surfaceElevated,
-      justifyContent: 'center', alignItems: 'center',
-    },
-    memberAvatarTreasurer: { backgroundColor: colors.primaryDark },
     memberName: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: colors.onSurface },
     memberBadge: { fontSize: FontSize.xs, color: colors.accentLight, fontWeight: FontWeight.bold, marginTop: 2 },
     // Quick add payment button

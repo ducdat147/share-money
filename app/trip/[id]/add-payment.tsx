@@ -82,7 +82,7 @@ export default function AddPaymentScreen() {
         await addPayment(id!, selectedMemberId, amount, note.trim() || undefined);
       }
       router.back();
-    } catch (error) {
+    } catch {
       showDialog(t('common.error'), t('add_payment.err_fail'));
     } finally {
       setIsSubmitting(false);
@@ -251,12 +251,6 @@ const createStyles = (colors: ThemeColors) =>
     dropdownValueText: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: colors.text },
     dropdownPlaceholder: { fontSize: FontSize.md, color: colors.textMuted, flex: 1 },
     dropdownBadge: { fontSize: FontSize.xs, color: colors.accentLight, fontWeight: FontWeight.bold, marginTop: 2 },
-    memberAvatar: {
-      width: 34, height: 34, borderRadius: 17,
-      backgroundColor: colors.surfaceElevated,
-      justifyContent: 'center', alignItems: 'center',
-    },
-    memberAvatarTreasurer: { backgroundColor: colors.primaryDark },
     // Bottom sheet modal
     modalOverlay: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
