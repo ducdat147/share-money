@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TextInput,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTripStore } from '@/hooks/useTripStore';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import CustomHeader from '@/components/CustomHeader';
+import KeyboardAvoidingView from '@/components/KeyboardAvoidingView';
 import SubmitButton from '@/components/SubmitButton';
 import { useDialog } from '@/components/DialogProvider';
 import { useTranslation } from 'react-i18next';

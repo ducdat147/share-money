@@ -18,6 +18,10 @@ interface Props {
 export default function SubmitButton({ title, icon, onPress, disabled, color = 'primary' }: Props) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  // Nền lúc disabled là surfaceElevated, rất nhạt ở chế độ sáng, nên chữ trắng không đọc được.
+  const contentColor = disabled
+    ? colors.onSurfaceElevated
+    : color === 'success' ? colors.onSuccess : colors.onPrimary;
 
   return (
     <View style={styles.footer}>
@@ -31,8 +35,8 @@ export default function SubmitButton({ title, icon, onPress, disabled, color = '
         disabled={disabled}
         haptic={Haptics.ImpactFeedbackStyle.Medium}
       >
-        {icon && <Ionicons name={icon} size={22} color={color === 'success' ? colors.onSuccess : colors.onPrimary} />}
-        <Text style={[styles.submitText, { color: color === 'success' ? colors.onSuccess : colors.onPrimary }]}>{title}</Text>
+        {icon && <Ionicons name={icon} size={22} color={contentColor} />}
+        <Text style={[styles.submitText, { color: contentColor }]}>{title}</Text>
       </ScalePressable>
     </View>
   );
@@ -41,7 +45,9 @@ export default function SubmitButton({ title, icon, onPress, disabled, color = '
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     footer: {
-      padding: Spacing.lg,
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.lg,
+      paddingBottom: Spacing.sm,
       borderTopWidth: 1,
       borderTopColor: colors.border,
     },

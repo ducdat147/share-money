@@ -5,7 +5,18 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "node": "22.17.1",
+      "pnpm": "11.20.0",
+      "env": {
+        "NODE_OPTIONS": "--max-old-space-size=8192",
+        "EXPO_EAS_BUILD_MAX_WORKERS": "2",
+        "JAVA_TOOL_OPTIONS": "-Xmx4096m"
+      },
+      "android": {
+        "buildType": "apk",
+        "image": "latest"
+      }
     },
     "preview": {
       "distribution": "internal",

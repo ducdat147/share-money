@@ -9,16 +9,17 @@ import { formatCurrency } from '@/utils/calculator';
 
 interface SummaryTableProps {
   summaries: MemberSummary[];
-  treasurerName?: string;
+  treasurerId?: string;
   onRowPress?: (summary: MemberSummary) => void;
   currencyCode?: import('@/utils/currency').CurrencyCode;
 }
 
 const SummaryTable: React.FC<SummaryTableProps> = React.memo(
-  ({ summaries, treasurerName, onRowPress, currencyCode }) => {
+  ({ summaries, treasurerId, onRowPress, currencyCode }) => {
     const { colors } = useAppTheme();
     const { t } = useTranslation();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const totalDebt = summaries.reduce((sum, item) => sum + item.debt, 0);
 
     return (
       <View style={styles.container}>
@@ -34,7 +35,7 @@ const SummaryTable: React.FC<SummaryTableProps> = React.memo(
         {summaries.map((summary) => {
           const isPositiveDebt = summary.debt > 0;
           const isNegativeDebt = summary.debt < 0;
-          const isTreasurer = summary.debt === 0 && summary.totalShare > 0;
+          const isTreasurer = summary.memberId === treasurerId;
           const hasItems = summary.items.length > 0;
 
           return (
@@ -70,7 +71,6 @@ const SummaryTable: React.FC<SummaryTableProps> = React.memo(
                     styles.debtText,
                     isPositiveDebt && styles.debtPositive,
                     isNegativeDebt && styles.debtNegative,
-                    isTreasurer && styles.debtZero,
                   ]}
                 >
                   {formatCurrency(Math.abs(summary.debt), currencyCode)}
@@ -83,31 +83,36 @@ const SummaryTable: React.FC<SummaryTableProps> = React.memo(
         {/* Footer: total */}
         <View style={styles.footerRow}>
           <Text style={[styles.footerCell, styles.nameCol]}>{t('summary.col_total')}</Text>
+          {/* Sum the unrounded shares so the total matches the expenses, not the rounded rows */}
           <Text style={[styles.footerCell, styles.numCol]}>
-            {formatCurrency(summaries.reduce((s, item) => s + item.totalShare, 0), currencyCode)}
+            {formatCurrency(
+              summaries.reduce((s, item) => s + item.items.reduce((sum, i) => sum + i.share, 0), 0),
+              currencyCode,
+            )}
           </Text>
           <Text style={[styles.footerCell, styles.numCol, { color: colors.success }]}>
             {formatCurrency(summaries.reduce((s, item) => s + item.totalPaid, 0), currencyCode)}
           </Text>
-          <Text style={[styles.footerCell, styles.numCol]}>
-            {formatCurrency(
-              summaries
-                .filter((s) => s.debt > 0)
-                .reduce((sum, item) => sum + item.debt, 0),
-              currencyCode,
-            )}
+          {/* Shortfalls and overpayments net out to the cash still held in the fund */}
+          <Text style={[
+            styles.footerCell,
+            styles.numCol,
+            totalDebt > 0.01 && styles.debtPositive,
+            totalDebt < -0.01 && styles.debtNegative,
+          ]}>
+            {formatCurrency(Math.abs(totalDebt), currencyCode)}
           </Text>
         </View>
 
-        {treasurerName && (
+        {treasurerId && (
           <View style={styles.legendRow}>
             <View style={styles.legendItem}>
               <View style={[styles.dot, { backgroundColor: colors.success }]} />
-              <Text style={styles.legendText}>{t('summary.legend_refunds', { name: treasurerName })}</Text>
+              <Text style={styles.legendText}>{t('summary.legend_overpaid')}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.dot, { backgroundColor: colors.danger }]} />
-              <Text style={styles.legendText}>{t('summary.legend_owes', { name: treasurerName })}</Text>
+              <Text style={styles.legendText}>{t('summary.legend_short')}</Text>
             </View>
           </View>
         )}
@@ -169,7 +174,6 @@ const createStyles = (colors: ThemeColors) =>
     debtText: { fontWeight: FontWeight.bold },
     debtPositive: { color: colors.danger },
     debtNegative: { color: colors.success },
-    debtZero: { color: colors.textMuted },
     debtContainer: {
       flexDirection: 'row',
       alignItems: 'center',
