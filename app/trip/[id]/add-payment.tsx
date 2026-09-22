@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Modal, FlatList,
+  Platform, Modal, FlatList,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTripStore } from '@/hooks/useTripStore';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import CustomHeader from '@/components/CustomHeader';
+import KeyboardAvoidingView from '@/components/KeyboardAvoidingView';
 import UserAvatar from '@/components/UserAvatar';
 import SubmitButton from '@/components/SubmitButton';
 import { useDialog } from '@/components/DialogProvider';

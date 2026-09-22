@@ -51,6 +51,8 @@ Tài liệu này lưu trữ toàn bộ lịch sử phát triển, các quyết �
 
 ### E. ⚠️ Phát hiện thêm, CHƯA sửa: `paid_by` NULL làm lệch sổ
 
+> **Đã sửa ngày 22-09-2026** qua `getFundFlow`, xem mục "Tách tiền của nhóm và tiền của thủ quỹ". `totalFundExpenses` nhắc bên dưới không còn tồn tại.
+
 Lỗi có sẵn từ trước, **không phải do đợt sửa này tạo ra**. Đã kiểm chứng bằng code thật:
 
 ```text
@@ -77,6 +79,56 @@ Khoản chi trả từ quỹ, paid_by NULL           -> sum(balances) = -120.000
 * `npx tsc --noEmit`: **0 lỗi** (trước đợt này là 2). `pnpm lint`: 0 error / 22 warning — **giữ nguyên 22 cảnh báo có sẵn, không phát sinh cảnh báo mới**.
 * Cách kiểm chứng logic tiền: copy `calculator.ts`/`currency.ts`/`types.ts` ra thư mục tạm, compile bằng `./node_modules/.bin/tsc` rồi chạy `node` — **chạy code thật, không mô phỏng lại**. Đã phủ: 19 case parser (gồm round trip qua chính `formatCurrency`), 4 nhánh guard xóa thành viên, và 3 kịch bản lệch sổ.
 * **Chưa chạy trên thiết bị thật.** Cần kiểm: (1) gõ `1.000.000` vào ô số tiền của trip VND và `10.50` của trip USD; (2) thử xóa thành viên đã có khoản chi — phải hiện dialog chặn 1 nút; (3) bật dark mode xem badge thủ quỹ và màu tiền đã hiện đúng; (4) đổi currency của trip rồi nhập tiền xem parse đúng theo currency mới.
+
+---
+
+## 📅 Cập Nhật (22-09-2026) — Vuốt trái thẻ chuyến đi để xoá
+
+Ở trang chủ, vuốt thẻ chuyến đi sang trái sẽ lộ nút Xoá màu đỏ bên phải. Đây là cách xoá duy nhất trên trang chủ, vì biểu tượng thùng rác trên thẻ đã bị bỏ. Nút gọi `onDelete`, nên vẫn qua hộp thoại xác nhận của `handleDeleteTrip`. Toàn bộ nằm trong [TripCard.tsx](../components/TripCard.tsx), chạy trên cả Android lẫn iOS.
+
+* Tự viết bằng `Gesture.Pan()` của react-native-gesture-handler cộng `Animated` của RN. Không dùng `Swipeable`: bản cũ đã bị gỡ ở RNGH 3, còn `ReanimatedSwipeable` cần reanimated, mà dự án đã bỏ reanimated.
+* Giữ RNGH `~2.28.0`, đúng bản Expo SDK 54 chốt và Expo Go 54 đóng gói sẵn phần native. Nâng lên 3.x thì Expo Go không chạy được nữa. Khi nâng Expo SDK mà bản đi kèm là 3.x, `Gesture.Pan()` vẫn còn nhưng thành API legacy, lúc đó nên chuyển sang `usePanGesture`. [SwipeBack.tsx](../components/SwipeBack.tsx) cũng cần chuyển theo.
+* Mỗi lúc chỉ một thẻ được mở, nhờ biến cấp module `openedCard`. Bấm vào thẻ đang mở, hoặc vuốt nó sang phải, thì thẻ đóng lại. Kéo chưa quá nửa đường mà thả chậm thì thẻ bật về.
+* Nút Xoá nằm dưới thẻ. Độ trong suốt của nút đi theo `translateX`, nên khi thẻ đóng, góc bo của thẻ không để lộ viền đỏ. `marginBottom` nằm ở khung bọc chứ không nằm ở thẻ, để nút cao đúng bằng thẻ.
+
+---
+
+## 📅 Cập Nhật (22-09-2026) — Vuốt từ mép trái để quay lại (Android)
+
+Thanh điều hướng đã bị ẩn, nên Android cần một cách quay lại ngoài mũi tên trên header. [SwipeBack.tsx](../components/SwipeBack.tsx) bắt cú vuốt sang phải bắt đầu trong 32dp sát mép trái. Kéo quá 80dp, hoặc thả tay đủ nhanh, thì gọi `goBack`. Vuốt lệch lên xuống quá 20dp thì cử chỉ bị hủy, nên cuộn dọc vẫn bình thường.
+
+* [_layout.tsx](../app/_layout.tsx) bọc mọi màn qua prop `screenLayout` của Stack. Màn nào `navigation.canGoBack()` là false, như trang chủ, thì cử chỉ tự tắt. Màn mới thêm vào Stack tự có cử chỉ này, không cần làm gì thêm.
+* Chỉ chạy trên Android. iOS đã có sẵn vuốt mép (màn thường) và vuốt xuống (modal) từ native stack.
+* Cử chỉ chỉ bắt ở mép chứ không phải toàn màn hình. Lý do là hàng chip cuộn ngang ở màn Tổng kết và thao tác kéo con trỏ trong ô nhập. Muốn nới vùng vuốt thì sửa `EDGE_WIDTH`.
+* Không có hiệu ứng màn hình chạy theo ngón tay. Màn bên dưới của native stack không hiện ra lúc đang kéo, nên kéo theo tay chỉ để lộ nền trống. Khi đủ ngưỡng, hiệu ứng đóng màn của hệ thống sẽ chạy.
+
+---
+
+## 📅 Cập Nhật (22-09-2026) — Ẩn thanh điều hướng Android & sửa KeyboardAvoidingView
+
+Thanh điều hướng của Android giờ bị ẩn trong toàn app. Bản build ẩn nó ngay lúc Activity khởi tạo, nhờ config plugin `expo-navigation-bar` với `visibility: hidden` trong [app.json](../app.json). [_layout.tsx](../app/_layout.tsx) ẩn lại mỗi khi hệ thống cho thanh hiện ra. Các trường hợp gồm vuốt cạnh dưới, bàn phím bật hoặc tắt, app quay lại foreground.
+
+* Expo Go giữ chỗ 48dp cho thanh ở tầng cửa sổ, kể cả khi thanh đã ẩn. Bản build edge-to-edge thì không. Vì vậy `_layout.tsx` gọi thẳng `setPositionAsync('absolute')` của module native, và chỉ gọi trong Expo Go. API JS bỏ qua lệnh này vì Expo Go tự báo là đã edge-to-edge.
+* `KeyboardAvoidingView` của RN 0.81 tính sai trên Android lúc bàn phím đóng. Nó lấy `screenY` của sự kiện đóng, mà giá trị này là chiều cao vùng hiển thị chứ không phải đáy màn hình. Kết quả là nút bị hở 22–70dp sau khi đóng bàn phím. [KeyboardAvoidingView.tsx](../components/KeyboardAvoidingView.tsx) cho sự kiện đóng đi theo đường của iOS, đưa khoảng co về 0. Ba màn `add-expense`, `add-payment`, `create` dùng component này thay cho bản của RN.
+* ⚠️ Trên Android, đừng dùng `behavior="padding"`, cũng đừng tự chèn khoảng đệm theo chiều cao bàn phím. Cả hai đã thử trên Galaxy Note 20 chạy Android 13. Ô nhập mất focus ngay khi bàn phím mở: bàn phím vẫn hiện nhưng gõ không vào. Chỉ `behavior="height"` giữ được focus.
+* Nút lúc disabled của [SubmitButton.tsx](../components/SubmitButton.tsx) đổi chữ sang `onSurfaceElevated`. Chữ trắng cũ gần như biến mất trên nền `surfaceElevated` ở chế độ sáng. Khoảng đệm đáy của nút này và của thanh nút ở màn chi tiết chuyến đi cũng giảm còn `Spacing.sm`.
+* `SystemUI.setBackgroundColorAsync(colors.background)` chạy theo theme. Nó che màu cam `#FF5733` của `backgroundColor` trong app.json, màu từng lộ ra ở vùng thanh điều hướng.
+* Profile `development` trong [eas.json](../eas.json) nhận cùng thiết lập `node`, `pnpm`, `env` với `preview`.
+* Mọi phép thử đều chạy trong Expo Go qua `adb`. Chưa kiểm trên bản build thật.
+
+---
+
+## 📅 Cập Nhật (22-09-2026) — Tách tiền của nhóm và tiền của thủ quỹ
+
+Màn Summary từng báo "Quỹ còn dư 150.113 đ" trong khi gợi ý tất toán bắt thủ quỹ chuyển 399.934 đ. Hai con số đều đúng nhưng không giải thích được cho nhau. Gốc rễ nằm ở khoản chi `paidBy = thủ quỹ`. Ô quỹ coi nó là chi từ quỹ, còn `calculateSummary` coi nó là thủ quỹ ứng tiền túi. Cột "Đã đóng" vì thế đếm cùng một khoản hai lần.
+
+* **Quy ước mới:** thủ quỹ tiêu tiền của thành viên khác trước, hết mới dùng tiền túi. [calculator.ts](../utils/calculator.ts) có thêm `getFundFlow` trả về `received` (tiền thành viên khác đóng) và `spent` (khoản chi thủ quỹ trả, gồm cả `paidBy` NULL). Với thủ quỹ, `advancedPayments = max(0, spent − received)` là tiền túi đã ứng, `fundHeld = max(0, received − spent)` là tiền mặt của người khác còn giữ.
+* `balance` của thủ quỹ **không đổi giá trị** vì `P − S − H` bằng đúng công thức cũ về mặt đại số. Tất toán chỉ đổi ở các row cũ có `paid_by` NULL, và đó chính là lỗi ở mục E, nay đã sửa.
+* `debt` giờ là `totalShare − totalPaid` cho mọi thành viên, kể cả thủ quỹ. Trước đây nó bị gán cứng 0 cho thủ quỹ. Tổng cột "Còn lại" trong [SummaryTable.tsx](../components/SummaryTable.tsx) vì thế luôn bằng tiền mặt còn giữ trong quỹ.
+* Thủ quỹ tự đóng quỹ cho mình (xảy ra khi đổi thủ quỹ sau khi đã thu) chỉ là chuyển tiền giữa hai túi của cùng một người. Khoản này bị loại khỏi `received` và khỏi `fundPayments` của thủ quỹ.
+* Ô thủ quỹ ở [summary.tsx](../app/trip/[id]/summary.tsx) chia hai phần "Tiền của nhóm" và "Tiền của thủ quỹ". Dòng cuối là `−balance` nên luôn khớp gợi ý tất toán. Modal chi tiết của thủ quỹ cũng hiển thị `−balance` thay cho `debt`.
+* **i18n:** bỏ `fund_collected`, `fund_spent`, `fund_surplus`, `fund_deficit`, `legend_owes`, `legend_refunds`. Thêm 11 key `fund_*`/`legend_*` mới. Cả 3 locale (vi/en/fr) giữ parity 179/179 key.
+* **⚠️ Ràng buộc cho lần sau:** mọi chỗ cần biết "khoản chi nào là chi từ quỹ" phải gọi `getFundFlow`, đừng tự viết lại điều kiện `!paidBy || paidBy === treasurerId`.
 
 ---
 

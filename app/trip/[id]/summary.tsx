@@ -15,7 +15,7 @@ import UserAvatar from '@/components/UserAvatar';
 import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import {
-  calculateSummary, calculateSettlements, formatCurrency, getTotalPayments,
+  calculateSummary, calculateSettlements, formatCurrency, getFundFlow,
 } from '@/utils/calculator';
 import { MemberSummary, SettlementStrategy } from '@/utils/types';
 
@@ -106,14 +106,15 @@ export default function SummaryScreen() {
   const settlements = useMemo(() => calculateSettlements(summaries, trip?.currency, strategy, centralMemberId), [summaries, trip?.currency, strategy, centralMemberId]);
 
   const treasurer = trip?.members.find((m) => m.id === trip.treasurerId);
-  const totalFundExpenses = useMemo(() => {
-    if (!trip) return 0;
-    return trip.expenses
-      .filter((e) => !e.paidBy || e.paidBy === trip.treasurerId)
-      .reduce((sum, e) => sum + e.amount, 0);
-  }, [trip]);
-  const totalPayments = useMemo(() => (trip ? getTotalPayments(trip.payments) : 0), [trip]);
-  
+  const treasurerSummary = useMemo(
+    () => summaries.find((s) => s.memberId === trip?.treasurerId),
+    [summaries, trip?.treasurerId],
+  );
+  const fundFlow = useMemo(
+    () => (trip ? getFundFlow(trip.expenses, trip.payments, trip.treasurerId) : { received: 0, spent: 0 }),
+    [trip],
+  );
+
   const handleRowPress = useCallback((summary: MemberSummary) => {
     setSelectedSummary(summary);
   }, []);
@@ -127,13 +128,17 @@ export default function SummaryScreen() {
   }
 
   const s = selectedSummary;
+  // The treasurer's debt only covers their own share; what they owe the group also
+  // includes the other members' cash they still hold.
+  const owed = s ? (s.memberId === treasurer?.id ? -s.balance : s.debt) : 0;
+  const treasurerNet = treasurerSummary ? -treasurerSummary.balance : 0;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <CustomHeader title={t('summary.title')} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {treasurer && (
+        {treasurer && treasurerSummary && (
           <View style={styles.treasurerBalance}>
             <View style={styles.treasurerHeader}>
               <UserAvatar 
@@ -150,22 +155,46 @@ export default function SummaryScreen() {
             </View>
             
             <View style={styles.fundDetails}>
+              <Text style={styles.fundSectionLabel}>{t('summary.fund_group_money')}</Text>
               <View style={styles.fundRow}>
-                <Text style={styles.fundLabel}>{t('summary.fund_collected')}</Text>
-                <Text style={styles.fundValueSuccess}>{formatCurrency(totalPayments, trip.currency)}</Text>
+                <Text style={styles.fundLabel}>{t('summary.fund_received_others')}</Text>
+                <Text style={styles.fundValueSuccess}>{formatCurrency(fundFlow.received, trip.currency)}</Text>
               </View>
               <View style={styles.fundRow}>
-                <Text style={styles.fundLabel}>{t('summary.fund_spent')}</Text>
-                <Text style={styles.fundValueDanger}>{formatCurrency(totalFundExpenses, trip.currency)}</Text>
+                <Text style={styles.fundLabel}>{t('summary.fund_spent_by_treasurer')}</Text>
+                <Text style={styles.fundValueDanger}>{formatCurrency(fundFlow.spent, trip.currency)}</Text>
               </View>
+              <View style={styles.fundRow}>
+                <Text style={styles.fundLabel}>{t('summary.fund_cash_held')}</Text>
+                <Text style={styles.fundValue}>{formatCurrency(treasurerSummary.fundHeld, trip.currency)}</Text>
+              </View>
+
+              <Text style={[styles.fundSectionLabel, styles.fundSectionLabelSpaced]}>{t('summary.fund_treasurer_money')}</Text>
+              <View style={styles.fundRow}>
+                <Text style={styles.fundLabel}>{t('summary.fund_pocket_advanced')}</Text>
+                <Text style={styles.fundValue}>{formatCurrency(treasurerSummary.advancedPayments, trip.currency)}</Text>
+              </View>
+              <View style={styles.fundRow}>
+                <Text style={styles.fundLabel}>{t('summary.fund_own_share')}</Text>
+                <Text style={styles.fundValue}>{formatCurrency(treasurerSummary.totalShare, trip.currency)}</Text>
+              </View>
+
               <View style={[styles.fundRow, styles.fundRowTotal]}>
                 <Text style={styles.fundLabelTotal}>
-                  {totalPayments >= totalFundExpenses ? t('summary.fund_surplus') : t('summary.fund_deficit')}
+                  {treasurerNet > 0.01
+                    ? t('summary.treasurer_debt')
+                    : treasurerNet < -0.01
+                      ? t('summary.fund_net_group_owes')
+                      : t('summary.even')}
                 </Text>
-                <Text style={[styles.fundValueTotal, { color: totalPayments >= totalFundExpenses ? colors.success : colors.danger }]}>
-                  {formatCurrency(Math.abs(totalPayments - totalFundExpenses), trip.currency)}
+                <Text style={[
+                  styles.fundValueTotal,
+                  { color: treasurerNet > 0.01 ? colors.danger : treasurerNet < -0.01 ? colors.success : colors.onSurface },
+                ]}>
+                  {formatCurrency(Math.abs(treasurerNet), trip.currency)}
                 </Text>
               </View>
+              <Text style={styles.fundHint}>{t('summary.fund_net_hint')}</Text>
             </View>
           </View>
         )}
@@ -174,7 +203,7 @@ export default function SummaryScreen() {
           <Text style={styles.sectionTitle}>{t('summary.section_details')}</Text>
           <SummaryTable
             summaries={summaries}
-            treasurerName={treasurer?.name}
+            treasurerId={treasurer?.id}
             onRowPress={handleRowPress}
             currencyCode={trip.currency}
           />
@@ -283,15 +312,15 @@ export default function SummaryScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                   <Text style={[
                     styles.modalDebt,
-                    s && s.debt > 0 && { color: colors.danger },
-                    s && s.debt < 0 && { color: colors.success },
-                    s && s.debt === 0 && { color: colors.textMuted, marginTop: 0 },
+                    s && owed > 0 && { color: colors.danger },
+                    s && owed < 0 && { color: colors.success },
+                    s && owed === 0 && { color: colors.textMuted, marginTop: 0 },
                   ]}>
                     {s
-                      ? s.debt > 0
-                        ? t('summary.debt', { amount: formatCurrency(s.debt, trip.currency) })
-                        : s.debt < 0
-                          ? t('summary.refund', { amount: formatCurrency(Math.abs(s.debt), trip.currency) })
+                      ? owed > 0
+                        ? t('summary.debt', { amount: formatCurrency(owed, trip.currency) })
+                        : owed < 0
+                          ? t('summary.refund', { amount: formatCurrency(Math.abs(owed), trip.currency) })
                           : treasurer?.name === s.name ? t('summary.treasurer') : t('summary.even')
                       : ''}
                   </Text>
@@ -377,32 +406,32 @@ export default function SummaryScreen() {
                 </View>
               )}
 
-              {s && s.debt !== 0 && (
+              {s && owed !== 0 && (
                 <View style={[
-                  styles.modalSection, 
+                  styles.modalSection,
                   styles.balanceCard,
-                  { borderColor: s.debt > 0 ? colors.danger : colors.success }
+                  { borderColor: owed > 0 ? colors.danger : colors.success }
                 ]}>
                   <View style={styles.balanceHeader}>
-                    <Ionicons 
-                      name={s.debt > 0 ? "alert-circle" : "checkmark-circle"} 
-                      size={20} 
-                      color={s.debt > 0 ? colors.danger : colors.success} 
+                    <Ionicons
+                      name={owed > 0 ? "alert-circle" : "checkmark-circle"}
+                      size={20}
+                      color={owed > 0 ? colors.danger : colors.success}
                     />
                     <Text style={[
-                      styles.balanceLabel, 
-                      { color: s.debt > 0 ? colors.danger : colors.success }
+                      styles.balanceLabel,
+                      { color: owed > 0 ? colors.danger : colors.success }
                     ]}>
-                      {s.debt > 0 
+                      {owed > 0
                         ? (s.memberId === treasurer?.id ? t('summary.treasurer_debt', { defaultValue: 'Cần hoàn trả lại nhóm' }) : t('summary.debt_title', { defaultValue: 'Khoản cần đóng' })) 
                         : t('summary.refund_due')}
                     </Text>
                   </View>
                   <Text style={[
-                    styles.balanceAmount, 
-                    { color: s.debt > 0 ? colors.danger : colors.success }
+                    styles.balanceAmount,
+                    { color: owed > 0 ? colors.danger : colors.success }
                   ]}>
-                    {formatCurrency(Math.abs(s.debt), trip.currency)}
+                    {formatCurrency(Math.abs(owed), trip.currency)}
                   </Text>
                 </View>
               )}
@@ -447,11 +476,18 @@ function createStyles(colors: ThemeColors) {
       marginTop: Spacing.xs,
       paddingTop: Spacing.sm,
     },
+    fundSectionLabel: {
+      fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: colors.onSurfaceMuted,
+      textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.xs,
+    },
+    fundSectionLabelSpaced: { marginTop: Spacing.md },
     fundLabel: { fontSize: FontSize.sm, color: colors.onSurfaceSecondary },
+    fundValue: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: colors.onSurface },
     fundValueSuccess: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: colors.success },
     fundValueDanger: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: colors.danger },
     fundLabelTotal: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: colors.onSurface },
     fundValueTotal: { fontSize: FontSize.md, fontWeight: FontWeight.bold },
+    fundHint: { fontSize: FontSize.xs, color: colors.onSurfaceMuted, marginTop: Spacing.xs },
 
     tableSection: { marginBottom: Spacing.lg },
     sectionTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: colors.onBackground, marginBottom: Spacing.md },

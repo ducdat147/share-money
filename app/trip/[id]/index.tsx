@@ -511,7 +511,8 @@ const createStyles = (colors: ThemeColors) =>
     // Bottom actions
     bottomActions: {
       paddingHorizontal: Spacing.lg,
-      paddingVertical: Spacing.md,
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.sm,
       borderTopWidth: 1,
       borderTopColor: colors.border,
       backgroundColor: colors.background,

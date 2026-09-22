@@ -54,9 +54,11 @@ Three distinct money flows, and mixing them up is the main source of bugs:
 
 - **Share** — an expense is split equally across `expense.participants`; each participant owes `amount / participants.length`.
 - **Fund payment** — a `Payment` row: cash handed to the treasurer up front.
-- **Advanced payment** — `expense.paidBy` is set: that member paid a vendor directly out of pocket.
+- **Advanced payment** — `expense.paidBy` is a non-treasurer member: that member paid a vendor directly out of pocket.
 
-`calculateSummary` produces `balance = totalPaid - totalShare`, except the treasurer, who additionally subtracts `fundHeld` (the whole pot they are holding). Positive balance = creditor, negative = debtor. Balances therefore sum to ~0 and are what settlement operates on. `debt` is a separate legacy field measured relative to the treasurer.
+An expense paid by the treasurer (or with no `paidBy`, a pre-migration row) is a **fund expense**. `getFundFlow` is the single definition of that rule and returns `received` (other members' payments) and `spent` (fund expenses). The treasurer spends the other members' money first, then their own pocket: their `advancedPayments`/`totalPaid` is `max(0, spent - received)` and `fundHeld` is `max(0, received - spent)`, the other members' cash still in hand. A treasurer's payment to themself is ignored.
+
+`calculateSummary` produces `balance = totalPaid - totalShare - fundHeld` (`fundHeld` is 0 for everyone but the treasurer). Positive balance = creditor, negative = debtor. Balances therefore sum to ~0 and are what settlement operates on. `debt = totalShare - totalPaid` (set only when the trip has a treasurer) is what the member still owes towards their own share; for the treasurer it excludes the cash they hold, so what the treasurer owes the group is `-balance`, not `debt`.
 
 `calculateSettlements` has two strategies (`SettlementStrategy`):
 - `optimal` — for ≤15 members, repeatedly extracts zero-sum subsets (`findZeroSumSubset` backtracking) and settles each internally, then a greedy largest-debtor/largest-creditor pass for the remainder. Minimizes transaction count.

@@ -2,6 +2,23 @@ import { Expense, Member, MemberSummary, Payment, Settlement, SettlementStrategy
 import { roundCurrency, CurrencyCode } from './currency';
 export { formatCurrency, roundCurrency } from './currency';
 
+// Money that passed through the treasurer's hands: received from the other members,
+// and spent on expenses the treasurer paid. An expense without paidBy predates the
+// paid_by column and was paid from the fund, so it counts as treasurer-paid.
+export function getFundFlow(
+  expenses: Expense[],
+  payments: Payment[],
+  treasurerId?: string,
+): { received: number; spent: number } {
+  const received = payments
+    .filter((p) => p.memberId !== treasurerId)
+    .reduce((sum, p) => sum + p.amount, 0);
+  const spent = expenses
+    .filter((e) => !e.paidBy || e.paidBy === treasurerId)
+    .reduce((sum, e) => sum + e.amount, 0);
+  return { received, spent };
+}
+
 export function calculateSummary(
   members: Member[],
   expenses: Expense[],
@@ -9,9 +26,11 @@ export function calculateSummary(
   treasurerId?: string,
   currencyCode: CurrencyCode = 'VND',
 ): MemberSummary[] {
-  const totalFundReceived = payments.reduce((sum, p) => sum + p.amount, 0);
+  const fundFlow = getFundFlow(expenses, payments, treasurerId);
 
   return members.map((member) => {
+    const isTreasurer = member.id === treasurerId;
+
     // Calculate share for each expense this member participates in
     const items = expenses
       .filter((expense) => expense.participants.includes(member.id))
@@ -22,40 +41,44 @@ export function calculateSummary(
 
     const totalShare = items.reduce((sum, item) => sum + item.share, 0);
 
-    // Sum all payments made by this member to the treasurer
-    const fundPayments = payments
-      .filter((payment) => payment.memberId === member.id)
-      .reduce((sum, payment) => sum + payment.amount, 0);
+    // Sum all payments made by this member to the treasurer. A treasurer paying
+    // themself (possible after the treasurer changes) only moves their own money.
+    const fundPayments = isTreasurer
+      ? 0
+      : payments
+          .filter((payment) => payment.memberId === member.id)
+          .reduce((sum, payment) => sum + payment.amount, 0);
 
-    // Sum all expenses this member paid for directly
-    const advancedItems = expenses
-      .filter((expense) => expense.paidBy === member.id)
-      .map((expense) => ({
-        description: expense.description,
-        amount: expense.amount,
-      }));
+    // Sum all expenses this member paid for directly. The treasurer's expenses are
+    // paid from the fund, so they are not out-of-pocket items.
+    const advancedItems = isTreasurer
+      ? []
+      : expenses
+          .filter((expense) => expense.paidBy === member.id)
+          .map((expense) => ({
+            description: expense.description,
+            amount: expense.amount,
+          }));
 
-    const advancedPayments = advancedItems.reduce((sum, item) => sum + item.amount, 0);
+    let advancedPayments = advancedItems.reduce((sum, item) => sum + item.amount, 0);
+    let fundHeld = 0;
+
+    // The treasurer spends the other members' money first and only dips into their
+    // own pocket once it runs out. The split between the two never changes the balance.
+    if (isTreasurer) {
+      advancedPayments = Math.max(0, fundFlow.spent - fundFlow.received);
+      fundHeld = Math.max(0, fundFlow.received - fundFlow.spent);
+    }
 
     const totalPaid = fundPayments + advancedPayments;
 
-    // TRUE BALANCE: (Contribution) - (Consumption)
-    // For normal members: totalPaid - totalShare
-    // For treasurer: totalPaid - totalShare - (Total Fund they are holding)
-    let balance = 0;
-    let fundHeld = 0;
+    // TRUE BALANCE: (Contribution) - (Consumption) - (Other members' cash still held)
+    // fundHeld is 0 for everyone but the treasurer.
+    const balance = totalPaid - totalShare - fundHeld;
 
-    if (member.id === treasurerId) {
-      fundHeld = totalFundReceived;
-      balance = totalPaid - totalShare - fundHeld;
-    } else {
-      balance = totalPaid - totalShare;
-    }
-
-    // Debt calculation for simplified settlement (relative to treasurer)
-    // Positive = owes treasurer, Negative = treasurer owes them
+    // Positive = still owes part of their share, Negative = paid more than their share
     let debt = 0;
-    if (treasurerId && member.id !== treasurerId) {
+    if (treasurerId) {
       debt = totalShare - totalPaid;
     }
 

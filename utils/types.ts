@@ -55,11 +55,11 @@ export interface MemberSummary {
   advancedItems: { description: string; amount: number }[];
   totalShare: number;
   totalPaid: number;
-  fundPayments: number; // Money paid to treasurer
-  advancedPayments: number; // Money paid directly for expenses
-  fundHeld: number; // Money held as treasurer
+  fundPayments: number; // Money paid to treasurer (0 for the treasurer)
+  advancedPayments: number; // Money paid directly for expenses (treasurer: own money spent after the fund ran out)
+  fundHeld: number; // Other members' cash the treasurer still holds
   balance: number; // Net balance (Positive = creditor, Negative = debtor)
-  debt: number; // positive = owes treasurer, negative = treasurer owes them
+  debt: number; // positive = still owes part of their share, negative = paid more than their share
 }
 
 export interface Settlement {
