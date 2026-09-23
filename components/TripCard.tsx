@@ -186,7 +186,7 @@ const createStyles = (colors: ThemeColors) =>
       overflow: 'hidden',
     },
     actions: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       flexDirection: 'row',
       justifyContent: 'flex-end',
     },

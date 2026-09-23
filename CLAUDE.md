@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Share Money — an offline-first Expo/React Native app (SDK 54, New Architecture, Expo Router v6) that splits trip expenses among a group and computes who-owes-whom settlements. All data lives in on-device SQLite; there is no backend.
+Share Money — an offline-first Expo/React Native app (SDK 57, React Native 0.86, New Architecture, Expo Router 57) that splits trip expenses among a group and computes who-owes-whom settlements. All data lives in on-device SQLite; there is no backend.
 
 ## Commands
 
@@ -72,7 +72,7 @@ Currency is **per-trip** (`trip.currency`, `'VND' | 'USD'`), not global; VND has
 
 ### Routing
 
-File-based via Expo Router with `typedRoutes` enabled. `app/_layout.tsx` registers every screen with `headerShown: false`; screens render `components/CustomHeader` themselves. `trip/create`, `trip/[id]/add-expense`, and `trip/[id]/add-payment` are `presentation: 'modal'`. Providers (`GestureHandlerRootView` → navigation `ThemeProvider` → `DialogProvider`) and the `@/utils/i18n` side-effect import all live in the root layout.
+File-based via Expo Router with `typedRoutes` enabled. Never import `@react-navigation/*` — since SDK 56 expo-router rejects it; use `expo-router/react-navigation`. `app/_layout.tsx` registers every screen with `headerShown: false`; screens render `components/CustomHeader` themselves. `trip/create`, `trip/[id]/add-expense`, and `trip/[id]/add-payment` are `presentation: 'modal'`. Providers (`GestureHandlerRootView` → navigation `ThemeProvider` → `DialogProvider`) and the `@/utils/i18n` side-effect import all live in the root layout.
 
 ## Conventions
 

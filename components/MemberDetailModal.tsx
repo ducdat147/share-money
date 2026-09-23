@@ -221,7 +221,7 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'flex-end',
     },
     overlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: colors.overlay,
     },
     keyboardView: {
