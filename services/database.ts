@@ -233,6 +233,11 @@ export async function updateTripTreasurer(
   ]);
 }
 
+export async function updateTripName(tripId: string, name: string): Promise<void> {
+  const database = await getDatabase();
+  await database.runAsync('UPDATE trips SET name = ? WHERE id = ?', [name, tripId]);
+}
+
 export async function deleteTrip(tripId: string): Promise<void> {
   const database = await getDatabase();
   await database.runAsync('DELETE FROM trips WHERE id = ?', [tripId]);

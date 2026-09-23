@@ -13,6 +13,7 @@ import ExpenseItem from '@/components/ExpenseItem';
 import PaymentItem from '@/components/PaymentItem';
 import UserAvatar from '@/components/UserAvatar';
 import MemberDetailModal from '@/components/MemberDetailModal';
+import RenameTripDialog from '@/components/RenameTripDialog';
 import { useDialog } from '@/components/DialogProvider';
 import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
@@ -28,7 +29,7 @@ export default function TripDetailScreen() {
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const {
-    trips, loadTrip, removeExpense, removePayment, completeTrip, deleteTrip, addMember, removeMember, updateTreasurer, updateMemberName, addPayment,
+    trips, loadTrip, removeExpense, removePayment, completeTrip, deleteTrip, addMember, removeMember, updateTreasurer, updateMemberName, addPayment, updateTripName,
   } = useTripStore();
 
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
@@ -36,6 +37,7 @@ export default function TripDetailScreen() {
   const [newMemberName, setNewMemberName] = useState('');
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [isMemberModalVisible, setIsMemberModalVisible] = useState(false);
+  const [isRenameVisible, setIsRenameVisible] = useState(false);
 
   const trip = useMemo(() => trips.find((t) => t.id === id), [trips, id]);
 
@@ -153,18 +155,34 @@ export default function TripDetailScreen() {
     }
   }, [selectedMember, id, updateMemberName]);
 
+  // Tiền đã đóng được ghi là thủ quỹ hiện tại đang giữ. Đổi hoặc bỏ thủ quỹ lúc này làm lệch sổ,
+  // nên chỉ cho phép khi danh sách đóng quỹ trống.
+  const treasurerLocked = !!trip?.treasurerId && (trip?.payments.length ?? 0) > 0;
+
   const handleToggleTreasurer = useCallback(async () => {
-    if (selectedMember && id) {
+    if (selectedMember && id && !treasurerLocked) {
       const newTreasurerId = trip?.treasurerId === selectedMember.id ? undefined : selectedMember.id;
       await updateTreasurer(id, newTreasurerId);
     }
-  }, [selectedMember, id, trip?.treasurerId, updateTreasurer]);
+  }, [selectedMember, id, trip?.treasurerId, treasurerLocked, updateTreasurer]);
 
   const handleAddFund = useCallback(async (amount: number) => {
     if (selectedMember && id) {
       await addPayment(id, selectedMember.id, amount, t('member_detail.add_fund'));
     }
   }, [selectedMember, id, addPayment, t]);
+
+  const handleRename = useCallback(async (name: string) => {
+    if (!id) return;
+    try {
+      await updateTripName(id, name);
+      setIsRenameVisible(false);
+    } catch {
+      // Đóng hộp đổi tên trước: mở hộp thoại chồng lên một Modal khác dễ không hiện trên iOS.
+      setIsRenameVisible(false);
+      showDialog(t('common.error'), t('trip_detail.err_rename'));
+    }
+  }, [id, updateTripName, showDialog, t]);
 
   const handleCompleteTrip = useCallback(() => {
     if (!trip) return;
@@ -296,6 +314,8 @@ export default function TripDetailScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <CustomHeader
         title={trip.name}
+        // Chuyến đã kết thúc thì khoá đổi tên, như các thao tác sửa khác.
+        onTitlePress={trip.isCompleted ? undefined : () => setIsRenameVisible(true)}
         rightAction={
           <View style={styles.currencyBadge}>
             <Text style={styles.currencyBadgeText}>
@@ -304,25 +324,48 @@ export default function TripDetailScreen() {
           </View>
         }
       />
-      {/* Stats Header */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
+      {/* Stats Header: mỗi thẻ là một tab, bấm thẻ nào thì danh sách bên dưới hiện nội dung của thẻ đó */}
+      <View style={styles.statsContainer} accessibilityRole="tablist">
+        <TouchableOpacity
+          style={styles.statCard}
+          onPress={() => setActiveTab('expenses')}
+          activeOpacity={0.8}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'expenses' }}
+        >
           <Ionicons name="receipt-outline" size={20} color={colors.accent} />
           <Text style={styles.statValue}>{formatCurrency(totalExpenses, trip.currency)}</Text>
           <Text style={styles.statLabel}>{t('trip_detail.total_expense')}</Text>
-        </View>
+          <Text style={styles.statCount}>{t('trip_detail.expense_items', { count: trip.expenses.length })}</Text>
+          {activeTab === 'expenses' && <View style={styles.statIndicator} />}
+        </TouchableOpacity>
         {treasurer && (
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={() => setActiveTab('payments')}
+            activeOpacity={0.8}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'payments' }}
+          >
             <Ionicons name="cash-outline" size={20} color={colors.success} />
             <Text style={styles.statValue}>{formatCurrency(totalPayments, trip.currency)}</Text>
             <Text style={styles.statLabel}>{t('trip_detail.total_payment')}</Text>
-          </View>
+            <Text style={styles.statCount}>{t('trip_detail.payment_items', { count: trip.payments.length })}</Text>
+            {activeTab === 'payments' && <View style={styles.statIndicator} />}
+          </TouchableOpacity>
         )}
-        <View style={styles.statCard}>
+        <TouchableOpacity
+          style={styles.statCard}
+          onPress={() => setActiveTab('members')}
+          activeOpacity={0.8}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'members' }}
+        >
           <Ionicons name="people-outline" size={20} color={colors.primaryLight} />
           <Text style={styles.statValue}>{trip.members.length}</Text>
           <Text style={styles.statLabel}>{t('trip_detail.members_count_label')}</Text>
-        </View>
+          {activeTab === 'members' && <View style={styles.statIndicator} />}
+        </TouchableOpacity>
       </View>
 
       {treasurer && (
@@ -331,21 +374,6 @@ export default function TripDetailScreen() {
           <Text style={styles.treasurerText}>{t('summary.treasurer')}: {treasurer.name}</Text>
         </View>
       )}
-
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity style={[styles.tab, activeTab === 'expenses' && styles.tabActive]} onPress={() => setActiveTab('expenses')}>
-          <Text style={[styles.tabText, activeTab === 'expenses' && styles.tabTextActive]}>{t('trip_detail.tab_expenses', { count: trip.expenses.length })}</Text>
-        </TouchableOpacity>
-        {treasurer && (
-          <TouchableOpacity style={[styles.tab, activeTab === 'payments' && styles.tabActive]} onPress={() => setActiveTab('payments')}>
-            <Text style={[styles.tabText, activeTab === 'payments' && styles.tabTextActive]}>{t('trip_detail.tab_payments', { count: trip.payments.length })}</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity style={[styles.tab, activeTab === 'members' && styles.tabActive]} onPress={() => setActiveTab('members')}>
-          <Text style={[styles.tabText, activeTab === 'members' && styles.tabTextActive]}>{t('trip_detail.tab_members', { count: trip.members.length })}</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* List */}
       {activeTab === 'expenses' ? (
@@ -420,10 +448,18 @@ export default function TripDetailScreen() {
         member={selectedMember}
         isTreasurer={selectedMember?.id === trip.treasurerId}
         hasTreasurer={!!trip.treasurerId}
+        treasurerLocked={treasurerLocked}
         currencyCode={trip.currency}
         onUpdateName={handleUpdateMemberName}
         onToggleTreasurer={handleToggleTreasurer}
         onAddFund={handleAddFund}
+      />
+
+      <RenameTripDialog
+        visible={isRenameVisible}
+        initialName={trip.name}
+        onCancel={() => setIsRenameVisible(false)}
+        onSave={handleRename}
       />
     </SafeAreaView>
   );
@@ -450,24 +486,19 @@ const createStyles = (colors: ThemeColors) =>
     statsContainer: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
     statCard: {
       flex: 1, backgroundColor: colors.surface, borderRadius: BorderRadius.md, padding: Spacing.md,
-      alignItems: 'center', gap: Spacing.xs, borderWidth: 1, borderColor: colors.border,
+      alignItems: 'center', gap: Spacing.xs, borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
     },
     statValue: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: colors.onSurface },
     statLabel: { fontSize: FontSize.xs, color: colors.onSurfaceSecondary },
+    statCount: { fontSize: FontSize.xs, color: colors.onSurfaceMuted },
+    // Vạch dưới thẻ đang chọn; overflow của statCard cắt nó theo góc bo.
+    statIndicator: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, backgroundColor: colors.primary },
     treasurerInfo: {
       flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginHorizontal: Spacing.lg,
       marginBottom: Spacing.sm, backgroundColor: colors.surfaceElevated,
       paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: BorderRadius.sm,
     },
     treasurerText: { fontSize: FontSize.sm, color: colors.accentLight, fontWeight: FontWeight.medium },
-    tabsContainer: {
-      flexDirection: 'row', marginHorizontal: Spacing.lg, marginBottom: Spacing.md,
-      backgroundColor: colors.surface, borderRadius: BorderRadius.md, padding: 3,
-    },
-    tab: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: BorderRadius.sm },
-    tabActive: { backgroundColor: colors.primary },
-    tabText: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: colors.onSurfaceSecondary },
-    tabTextActive: { color: colors.onPrimary },
     listContent: { paddingHorizontal: Spacing.lg, flexGrow: 1 },
     emptyTab: { paddingTop: 60, alignItems: 'center' },
     emptyTabText: { fontSize: FontSize.md, color: colors.onSurfaceMuted },

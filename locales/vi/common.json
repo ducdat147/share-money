@@ -12,7 +12,6 @@
 		"payer_label": "Người chi",
 		"payer_placeholder": "Chọn người chi...",
 		"per_person": "{{amount}}/người",
-		"per_person_detail": "Mỗi người: {{amount}}",
 		"submit": "Thêm khoản chi",
 		"submitting": "Đang thêm...",
 		"title": "Thêm chi tiêu",
@@ -51,14 +50,16 @@
 	"components": {
 		"badge_active": "Đang diễn ra",
 		"badge_completed": "Đã kết thúc",
-		"deselect_all": "Bỏ tất cả",
+		"deselect_all": "Bỏ chọn tất cả",
 		"expense_count": "{{count}} khoản chi",
 		"member_count": "{{count}} người",
 		"note": "Ghi chú",
 		"paid_by": "Trả bởi",
 		"participants_count": "Người tham gia ({{selected}}/{{total}})",
 		"payer_prefix": "Người chi: ",
-		"select_all": "Tất cả",
+		"select_all": "Chọn tất cả",
+		"select_at_least_one": "Chọn ít nhất 1 người",
+		"split_equally": "Chia đều cho {{count}} người",
 		"total_expense": "Tổng chi"
 	},
 	"create_trip": {
@@ -92,6 +93,7 @@
 		"save_success": "Đã cập nhật thông tin",
 		"set_treasurer": "Chỉ định thủ quỹ",
 		"title": "Thông tin thành viên",
+		"treasurer_locked": "Đã có khoản đóng quỹ nên chưa đổi hoặc bỏ được thủ quỹ. Hãy xóa hết các khoản đóng quỹ trước.",
 		"update_name": "Cập nhật tên"
 	},
 	"settings": {
@@ -187,14 +189,15 @@
 		"err_member_exists": "Tên đã tồn tại trong nhóm",
 		"err_member_in_expense": "{{name}} đang có khoản chi hoặc khoản đóng quỹ trong chuyến đi. Hãy xóa các khoản đó trước rồi mới xóa thành viên.",
 		"err_remove_treasurer": "Không thể xóa thủ quỹ",
+		"err_rename": "Không đổi được tên chuyến đi",
 		"err_treasurer_holds_fund": "{{name}} đang là thủ quỹ và đang giữ quỹ của nhóm. Hãy xóa các khoản đóng quỹ trước rồi mới xóa thành viên.",
+		"expense_items": "{{count}} khoản",
 		"member_fund_btn": "Tiền đóng",
 		"members_count_label": "Thành viên",
 		"need_pay": "Cần:",
 		"paid": "Đã đóng:",
-		"tab_expenses": "Chi tiêu ({{count}})",
-		"tab_members": "Nhóm ({{count}})",
-		"tab_payments": "Đóng quỹ ({{count}})",
+		"payment_items": "{{count}} khoản",
+		"rename_title": "Đổi tên chuyến đi",
 		"total_expense": "Tổng chi",
 		"total_payment": "Đã thu"
 	}

@@ -12,7 +12,6 @@
 		"payer_label": "Payé par",
 		"payer_placeholder": "Sélectionner le payeur...",
 		"per_person": "{{amount}}/personne",
-		"per_person_detail": "Par personne : {{amount}}",
 		"submit": "Ajouter la dépense",
 		"submitting": "Ajout en cours...",
 		"title": "Ajouter une dépense",
@@ -59,6 +58,8 @@
 		"participants_count": "Participants ({{selected}}/{{total}})",
 		"payer_prefix": "Payé par : ",
 		"select_all": "Tout sélectionner",
+		"select_at_least_one": "Sélectionnez au moins une personne",
+		"split_equally": "Partagé à parts égales entre {{count}} personnes",
 		"total_expense": "Total dépensé"
 	},
 	"create_trip": {
@@ -92,6 +93,7 @@
 		"save_success": "Membre mis à jour",
 		"set_treasurer": "Nommer trésorier",
 		"title": "Détails du membre",
+		"treasurer_locked": "Des cotisations ont été collectées : impossible de changer ou retirer le trésorier. Supprimez d'abord toutes les cotisations.",
 		"update_name": "Modifier le nom"
 	},
 	"settings": {
@@ -187,14 +189,15 @@
 		"err_member_exists": "Ce nom existe déjà dans le groupe",
 		"err_member_in_expense": "{{name}} a déjà des dépenses ou des cotisations dans ce voyage. Supprimez d'abord ces entrées, puis retirez le membre.",
 		"err_remove_treasurer": "Impossible de retirer le trésorier",
+		"err_rename": "Impossible de renommer le voyage",
 		"err_treasurer_holds_fund": "{{name}} est le trésorier et détient la cagnotte du groupe. Supprimez d'abord les cotisations, puis retirez le membre.",
+		"expense_items": "{{count}} dépenses",
 		"member_fund_btn": "Cotisation",
 		"members_count_label": "Membres",
 		"need_pay": "À payer :",
 		"paid": "Payé :",
-		"tab_expenses": "Dépenses ({{count}})",
-		"tab_members": "Membres ({{count}})",
-		"tab_payments": "Cotisations ({{count}})",
+		"payment_items": "{{count}} cotisations",
+		"rename_title": "Renommer le voyage",
 		"total_expense": "Total dépensé",
 		"total_payment": "Collecté"
 	}
