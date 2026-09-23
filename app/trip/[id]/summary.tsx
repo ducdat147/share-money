@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, Modal, TouchableOpacity, Animated, Pressable,
 } from 'react-native';
-import ViewShot from 'react-native-view-shot';
+import ViewShot, { ViewShotRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,7 +32,7 @@ export default function SummaryScreen() {
 
   const [strategy, setStrategy] = useState<SettlementStrategy>('optimal');
   const [centralMemberId, setCentralMemberId] = useState<string | undefined>(undefined);
-  const viewShotRef = useRef<ViewShot>(null);
+  const viewShotRef = useRef<ViewShotRef>(null);
 
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const modalTranslateY = useRef(new Animated.Value(600)).current;
@@ -638,7 +638,7 @@ function createStyles(colors: ThemeColors) {
       justifyContent: 'flex-end',
     },
     modalOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: colors.overlay,
     },
     modalSheet: {
