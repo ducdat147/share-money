@@ -82,6 +82,48 @@ Khoản chi trả từ quỹ, paid_by NULL           -> sum(balances) = -120.000
 
 ---
 
+## 📅 Cập Nhật (22-09-2026) — Đổi tên chuyến đi
+
+Ở màn chi tiết chuyến đi, cạnh tên chuyến trên tiêu đề có bút chì. Bấm vào tên thì mở [RenameTripDialog.tsx](../components/RenameTripDialog.tsx). Nút Lưu chỉ bật khi tên mới khác tên cũ và không rỗng. Chuyến đã kết thúc thì không có bút chì, tức là khoá đổi tên như các thao tác sửa khác.
+
+* Tầng dữ liệu có thêm `updateTripName` trong [database.ts](../services/database.ts) và store. Store theo đúng mẫu ghi rồi `loadTrip`. Trang chủ tự làm mới khi quay lại nhờ `useFocusEffect`.
+* [CustomHeader.tsx](../components/CustomHeader.tsx) có thêm prop tuỳ chọn `onTitlePress`. Có prop thì tiêu đề bấm được và hiện bút chì. Các màn khác không truyền nên không đổi.
+* Hộp này **cố ý không tự focus ô nhập**, theo yêu cầu: mở hộp ra bàn phím chưa bật, bấm vào ô thì mới bật.
+* ⚠️ Nếu sau này có ô nhập trong RN `Modal` cần tự focus trên Android: đừng dùng `autoFocus`. Nó chạy trước khi cửa sổ Modal có focus, ô trông như được chọn nhưng bàn phím không bật. Phải gọi `ref.focus()` trong `onShow` của Modal.
+
+---
+
+## 📅 Cập Nhật (22-09-2026) — Khoá thủ quỹ khi đã có khoản đóng quỹ
+
+Khi chuyến đi đã có thủ quỹ và danh sách đóng quỹ không trống, không được đổi thủ quỹ sang người khác và cũng không được bỏ thủ quỹ. Muốn đổi thì phải xoá hết các khoản đóng quỹ trước. Lý do là mọi khoản đóng đều được ghi nhận là tiền thủ quỹ hiện tại đang giữ, đổi người giữa chừng làm lệch sổ.
+
+* Ở [MemberDetailModal.tsx](../components/MemberDetailModal.tsx), dòng "Làm thủ quỹ" bị làm mờ, không bấm được, kèm dòng giải thích (`member_detail.treasurer_locked`). Dùng giải thích tại chỗ chứ không bật hộp thoại, vì hộp này đã là một Modal. Mở thêm Modal chồng lên dễ lỗi trên iOS.
+* `handleToggleTreasurer` ở [trip/[id]/index.tsx](../app/trip/[id]/index.tsx) kiểm tra lại cùng điều kiện (`treasurerLocked`) để không lách được qua giao diện.
+* Xoá thành viên đang là thủ quỹ khi đã có khoản đóng quỹ vốn đã bị chặn từ trước (`err_treasurer_holds_fund`), nay đủ bộ ba đường: đổi, bỏ, xoá.
+* Trường hợp thủ quỹ tự đóng quỹ cho mình, nhắc ở mục "Tách tiền của nhóm và tiền của thủ quỹ", từ nay không phát sinh thêm qua giao diện nữa. `getFundFlow` vẫn giữ nhánh xử lý đó cho dữ liệu cũ.
+
+---
+
+## 📅 Cập Nhật (22-09-2026) — Thiết kế lại phần "Người tham gia" khi thêm chi tiêu
+
+[MemberSelector.tsx](../components/MemberSelector.tsx) bỏ dạng chip và hai nút "Tất cả"/"Bỏ tất cả" xếp dọc. Giờ mỗi người là một dòng, gồm avatar, tên, nhãn Thủ quỹ, phần tiền của người đó và dấu ✓. Bấm vào đâu trên dòng cũng chọn hoặc bỏ được. Người bị bỏ hiện mờ, cột tiền là "—".
+
+* Một nút chữ ở góc phải tiêu đề tự đổi giữa "Chọn tất cả" và "Bỏ chọn tất cả". Tiêu đề dùng cùng kiểu với nhãn form (in hoa, đậm, giãn chữ).
+* Dòng "Mỗi người: …" dưới ô Số tiền đã bỏ. Phần tiền mỗi người giờ hiện ngay trên từng dòng, qua prop `share` do [add-expense.tsx](../app/trip/[id]/add-expense.tsx) tính sẵn bằng `roundCurrency`. Dòng cuối ghi "Chia đều cho N người", hoặc nhắc chọn ít nhất 1 người khi chưa chọn ai.
+* i18n: xoá `add_expense.per_person_detail`. Thêm `components.split_equally` và `components.select_at_least_one`. `select_all`/`deselect_all` tiếng Việt đổi thành "Chọn tất cả"/"Bỏ chọn tất cả" cho rõ nghĩa khi đứng một mình.
+
+---
+
+## 📅 Cập Nhật (22-09-2026) — Thẻ thống kê thay cho thanh Tabs ở màn chi tiết chuyến đi
+
+Thanh Tabs (Chi tiêu, Đóng quỹ, Nhóm) ở [trip/[id]/index.tsx](../app/trip/[id]/index.tsx) đã bị bỏ. Ba thẻ thống kê phía trên giờ đóng vai tab. Bấm Tổng chi thì hiện danh sách chi tiêu, Đã thu thì hiện danh sách đóng quỹ, Thành viên thì hiện nhóm. `activeTab` và ba `FlatList` giữ nguyên như cũ.
+
+* Thẻ đang chọn có một vạch `primary` dày 3dp sát mép dưới, bên trong thẻ. Nền thẻ không đổi. `overflow: hidden` của `statCard` cắt vạch theo góc bo.
+* Số khoản từng nằm trên tab, giờ là một dòng nhỏ dưới nhãn thẻ Tổng chi và Đã thu, dùng khoá `trip_detail.expense_items` và `payment_items`. Để thành dòng riêng vì thẻ trên màn 360dp chỉ còn khoảng 80dp cho chữ, viết liền "Tổng chi · 2 khoản" sẽ tự xuống dòng ở chỗ xấu. Khoá `tab_expenses`, `tab_payments`, `tab_members` đã xoá khỏi cả ba locale.
+* Thẻ Đã thu vẫn chỉ hiện khi có thủ quỹ, và vẫn tự chuyển về Chi tiêu khi thủ quỹ bị gỡ.
+
+---
+
 ## 📅 Cập Nhật (22-09-2026) — Vuốt trái thẻ chuyến đi để xoá
 
 Ở trang chủ, vuốt thẻ chuyến đi sang trái sẽ lộ nút Xoá màu đỏ bên phải. Đây là cách xoá duy nhất trên trang chủ, vì biểu tượng thùng rác trên thẻ đã bị bỏ. Nút gọi `onDelete`, nên vẫn qua hộp thoại xác nhận của `handleDeleteTrip`. Toàn bộ nằm trong [TripCard.tsx](../components/TripCard.tsx), chạy trên cả Android lẫn iOS.

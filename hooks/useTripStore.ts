@@ -23,6 +23,7 @@ interface TripStore {
   completeTrip: (tripId: string) => Promise<void>;
   reopenTrip: (tripId: string) => Promise<void>;
   updateTreasurer: (tripId: string, treasurerId?: string) => Promise<void>;
+  updateTripName: (tripId: string, name: string) => Promise<void>;
 
   addMember: (tripId: string, name: string) => Promise<void>;
   updateMemberName: (tripId: string, memberId: string, name: string) => Promise<void>;
@@ -178,6 +179,11 @@ export const useTripStore = create<TripStore>((set, get) => ({
 
   updateTreasurer: async (tripId, treasurerId) => {
     await db.updateTripTreasurer(tripId, treasurerId);
+    await get().loadTrip(tripId);
+  },
+
+  updateTripName: async (tripId, name) => {
+    await db.updateTripName(tripId, name);
     await get().loadTrip(tripId);
   },
 

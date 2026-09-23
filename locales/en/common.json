@@ -12,7 +12,6 @@
 		"payer_label": "Paid by",
 		"payer_placeholder": "Select payer...",
 		"per_person": "{{amount}}/person",
-		"per_person_detail": "Per person: {{amount}}",
 		"submit": "Add Expense",
 		"submitting": "Adding...",
 		"title": "Add Expense",
@@ -59,6 +58,8 @@
 		"participants_count": "Participants ({{selected}}/{{total}})",
 		"payer_prefix": "Paid by: ",
 		"select_all": "Select all",
+		"select_at_least_one": "Select at least one person",
+		"split_equally": "Split equally among {{count}} people",
 		"total_expense": "Total Spent"
 	},
 	"create_trip": {
@@ -92,6 +93,7 @@
 		"save_success": "Member updated",
 		"set_treasurer": "Set as Treasurer",
 		"title": "Member Details",
+		"treasurer_locked": "Fund payments have been collected, so the treasurer can't be changed or removed. Delete all fund payments first.",
 		"update_name": "Update name"
 	},
 	"settings": {
@@ -187,14 +189,15 @@
 		"err_member_exists": "Name already exists in the group",
 		"err_member_in_expense": "{{name}} already has expenses or fund payments in this trip. Delete those entries first, then remove the member.",
 		"err_remove_treasurer": "Cannot remove the treasurer",
+		"err_rename": "Couldn't rename the trip",
 		"err_treasurer_holds_fund": "{{name}} is the treasurer holding the group's fund. Delete the fund payments first, then remove the member.",
+		"expense_items": "{{count}} expenses",
 		"member_fund_btn": "Add fund",
 		"members_count_label": "Members",
 		"need_pay": "Need:",
 		"paid": "Paid:",
-		"tab_expenses": "Expenses ({{count}})",
-		"tab_members": "Members ({{count}})",
-		"tab_payments": "Funds ({{count}})",
+		"payment_items": "{{count}} payments",
+		"rename_title": "Rename trip",
 		"total_expense": "Total Ext.",
 		"total_payment": "Collected"
 	}

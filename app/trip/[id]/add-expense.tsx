@@ -63,6 +63,11 @@ export default function AddExpenseScreen() {
     [amount, selectedMembers.length],
   );
 
+  const shareText = useMemo(
+    () => (perPerson > 0 ? formatCurrency(roundCurrency(perPerson, trip?.currency), trip?.currency) : undefined),
+    [perPerson, trip?.currency],
+  );
+
   const payerMember = useMemo(
     () => trip?.members.find((m) => m.id === paidBy) ?? null,
     [trip, paidBy]
@@ -142,16 +147,6 @@ export default function AddExpenseScreen() {
               placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
             />
-            {amount > 0 && selectedMembers.length > 0 && (
-              <View style={styles.perPersonInfo}>
-                <Text style={styles.perPersonText}>
-                  {t('add_expense.per_person_detail', { amount: formatCurrency(roundCurrency(perPerson, trip?.currency), trip?.currency) })}
-                </Text>
-                <Text style={styles.perPersonCount}>
-                  ({selectedMembers.length})
-                </Text>
-              </View>
-            )}
           </View>
 
           <View style={styles.section}>
@@ -193,6 +188,8 @@ export default function AddExpenseScreen() {
               onToggle={handleToggleMember}
               onSelectAll={handleSelectAll}
               onDeselectAll={handleDeselectAll}
+              treasurerId={trip.treasurerId}
+              share={shareText}
             />
           </View>
         </ScrollView>
@@ -280,12 +277,6 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: FontSize.md, color: colors.text, borderWidth: 1, borderColor: colors.border,
     },
     amountInput: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, textAlign: 'center' },
-    perPersonInfo: {
-      flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-      gap: Spacing.xs, marginTop: Spacing.sm,
-    },
-    perPersonText: { fontSize: FontSize.sm, color: colors.primaryLight, fontWeight: FontWeight.semibold },
-    perPersonCount: { fontSize: FontSize.sm, color: colors.textMuted },
     dropdownTrigger: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       backgroundColor: colors.surface, borderRadius: BorderRadius.md,

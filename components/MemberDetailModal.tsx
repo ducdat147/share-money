@@ -25,6 +25,8 @@ interface MemberDetailModalProps {
   member: Member | null;
   isTreasurer: boolean;
   hasTreasurer: boolean;
+  /** Đã có khoản đóng quỹ: không cho đổi hoặc bỏ thủ quỹ. */
+  treasurerLocked: boolean;
   currencyCode?: CurrencyCode;
   onUpdateName: (name: string) => Promise<void>;
   onToggleTreasurer: () => Promise<void>;
@@ -37,6 +39,7 @@ export default function MemberDetailModal({
   member,
   isTreasurer,
   hasTreasurer,
+  treasurerLocked,
   currencyCode,
   onUpdateName,
   onToggleTreasurer,
@@ -153,8 +156,14 @@ export default function MemberDetailModal({
             </View>
 
             <TouchableOpacity
-              style={[styles.optionRow, isTreasurer && styles.optionRowActive]}
+              style={[
+                styles.optionRow,
+                isTreasurer && styles.optionRowActive,
+                treasurerLocked && styles.optionRowLocked,
+              ]}
               onPress={onToggleTreasurer}
+              disabled={treasurerLocked}
+              accessibilityState={{ disabled: treasurerLocked, checked: isTreasurer }}
             >
               <View style={styles.optionInfo}>
                 <Ionicons
@@ -170,6 +179,9 @@ export default function MemberDetailModal({
                 <Ionicons name="checkmark-circle" size={24} color={colors.accentLight} />
               )}
             </TouchableOpacity>
+            {treasurerLocked && (
+              <Text style={styles.lockedHint}>{t('member_detail.treasurer_locked')}</Text>
+            )}
 
             {hasTreasurer && !isTreasurer && (
               <View style={styles.fundSection}>
@@ -280,6 +292,15 @@ const createStyles = (colors: ThemeColors) =>
     optionRowActive: {
       backgroundColor: colors.primaryDark,
       borderColor: colors.accent,
+    },
+    optionRowLocked: {
+      opacity: 0.5,
+      marginBottom: Spacing.sm,
+    },
+    lockedHint: {
+      fontSize: FontSize.sm,
+      color: colors.textMuted,
+      marginBottom: Spacing.xl,
     },
     optionInfo: {
       flexDirection: 'row',
