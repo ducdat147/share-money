@@ -5,7 +5,7 @@ import { useThemeStore } from './useThemeStore';
 
 export function useAppTheme() {
   const { themeMode, setThemeMode } = useThemeStore();
-  const [systemScheme, setSystemScheme] = useState<ColorSchemeName>(
+  const [systemScheme, setSystemScheme] = useState<ColorSchemeName | null | undefined>(
     Appearance.getColorScheme(),
   );
 
