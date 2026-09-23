@@ -82,6 +82,19 @@ Khoản chi trả từ quỹ, paid_by NULL           -> sum(balances) = -120.000
 
 ---
 
+## 📅 Cập Nhật (23-09-2026) — Nâng từ SDK 54 lên SDK 57
+
+Expo Go trên điện thoại đã lên SDK 57 nên app SDK 54 không mở được nữa. Dự án giờ chạy Expo 57, React Native 0.86.3, React 19.2.3 và TypeScript 6. Các gói còn lại được căn bằng `npx expo install --fix`.
+
+* Từ SDK 56, `expo-router` chặn mọi import `@react-navigation/*`. `ThemeProvider`, `DarkTheme` và `DefaultTheme` giờ lấy từ `expo-router/react-navigation`. Đã gỡ `@react-navigation/native` và `@react-navigation/bottom-tabs` khỏi `package.json`. **Đừng cài lại chúng.**
+* Bỏ `newArchEnabled` trong `app.json` vì New Architecture đã là bắt buộc. Plugin `expo-navigation-bar` đổi `visibility: "hidden"` thành `hidden: true`.
+* Native module `ExpoNavigationBar` không còn `setPositionAsync`. Workaround riêng cho Expo Go trong [_layout.tsx](../app/_layout.tsx) đã bị xoá. Expo Go 57 vẫn vẽ tràn xuống đáy màn hình mà không cần nó.
+* RN 0.86 bỏ `StyleSheet.absoluteFillObject`. Dùng `...StyleSheet.absoluteFill` thay thế. `react-native-view-shot` 5 có kiểu ref riêng là `ViewShotRef`.
+* `eslint-config-expo` 57 thêm các rule React Compiler, làm lộ 33 lỗi lint ở code cũ, chủ yếu là `react-hooks/refs` với mẫu `useRef(new Animated.Value(...)).current`. **Chưa sửa.** Typecheck và `expo-doctor` đều sạch.
+* Đã chạy thử trong Expo Go trên Android thật: Home, chi tiết chuyến đi và Tổng kết hiển thị đúng, dữ liệu SQLite cũ vẫn còn. Chưa thử chia sẻ ảnh tổng kết, chưa thử iOS và bản build EAS.
+
+---
+
 ## 📅 Cập Nhật (22-09-2026) — Đổi tên chuyến đi
 
 Ở màn chi tiết chuyến đi, cạnh tên chuyến trên tiêu đề có bút chì. Bấm vào tên thì mở [RenameTripDialog.tsx](../components/RenameTripDialog.tsx). Nút Lưu chỉ bật khi tên mới khác tên cũ và không rỗng. Chuyến đã kết thúc thì không có bút chì, tức là khoá đổi tên như các thao tác sửa khác.

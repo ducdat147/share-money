@@ -8,7 +8,6 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#FF5733",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -38,12 +37,15 @@
       [
         "expo-navigation-bar",
         {
-          "visibility": "hidden"
+          "hidden": true
         }
       ],
       "expo-sqlite",
       "expo-localization",
-      "expo-font"
+      "expo-font",
+      "expo-sharing",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
