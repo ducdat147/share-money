@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { SUMMARY_PAGE_SIZE, useTripStore } from '@/hooks/useTripStore';
@@ -68,7 +69,7 @@ export default function HomeScreen() {
   const isSearchingRef = useRef(false);
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const { showDialog } = useDialog();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -278,6 +279,10 @@ export default function HomeScreen() {
       <Modal
         visible={menuVisible}
         transparent
+        statusBarTranslucent
+        navigationBarTranslucent
+        // Cửa sổ Modal mở ra với icon status bar màu trắng, kể cả ở light mode, nên đặt lại sau khi hiện.
+        onShow={() => StatusBar.setStyle(isDark ? 'light' : 'dark')}
         animationType="fade"
         onRequestClose={() => setMenuVisible(false)}
       >
