@@ -82,6 +82,19 @@ Khoản chi trả từ quỹ, paid_by NULL           -> sum(balances) = -120.000
 
 ---
 
+## 📅 Cập Nhật (22-10-2026) — Status bar đen trong Expo Go
+
+Trên Expo Go 57.0.9 (Galaxy Note 20 Ultra, Android 13), status bar là một dải đen đặc. App bị đẩy xuống ngay dưới dải đó. Icon tối nằm trên nền đen nên gần như không thấy.
+
+* Nguyên nhân nằm ở `<StatusBar>` của `expo-status-bar`, vốn bọc component cùng tên của RN. Lần mount đầu, nó gọi `setHidden(false)`, `setColor` và `setTranslucent(false)`. Expo Go không bật cờ edge-to-edge của RN, nên `statusBarShow()` trong `WindowUtil.kt` đi nhánh cũ. Nhánh này gọi `setDecorFitsSystemWindows(true)` và gắn `FLAG_FORCE_NOT_FULLSCREEN` cho cửa sổ.
+* [_layout.tsx](../app/_layout.tsx) giờ chỉ gọi `StatusBar.setStyle()` trong `useEffect` theo `isDark`. Lệnh này chỉ đổi màu icon. **Đừng mount lại `<StatusBar>`.**
+* Bản build không dính lỗi này. Template SDK 57 đặt `edgeToEdgeEnabled=true` trong `gradle.properties`, cờ edge-to-edge bật từ lúc khởi động.
+* RN `Modal` mở ra một cửa sổ riêng. Ở light mode, cửa sổ này hiện icon status bar màu trắng nên vùng trên cùng trông trắng tinh. RN có chép màu icon từ activity sang, nhưng một bước sau `show()` ghi đè lại. Gọi lại `StatusBar.setStyle()` trong `onShow` thì icon về đúng màu, đã thử trên máy.
+* Menu hamburger ở [index.tsx](../app/index.tsx) đã có `onShow` đó, kèm `statusBarTranslucent` và `navigationBarTranslucent`. Hai prop này cho lớp nền mờ phủ lên status bar. Bản build tự bật chúng vì cờ edge-to-edge đang bật. Sáu Modal còn lại (`DialogProvider`, `RenameTripDialog`, `MemberDetailModal`, dropdown ở `add-expense`/`add-payment`, sheet ở `summary`) **chưa sửa**.
+* Đã kiểm trên máy thật qua `adb`: màn chính và menu đều đúng màu icon ở cả chế độ sáng lẫn tối, nền app tràn lên dưới status bar. Chưa kiểm trên APK.
+
+---
+
 ## 📅 Cập Nhật (23-09-2026) — Nâng từ SDK 54 lên SDK 57
 
 Expo Go trên điện thoại đã lên SDK 57 nên app SDK 54 không mở được nữa. Dự án giờ chạy Expo 57, React Native 0.86.3, React 19.2.3 và TypeScript 6. Các gói còn lại được căn bằng `npx expo install --fix`.

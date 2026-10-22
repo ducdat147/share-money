@@ -42,6 +42,13 @@ export default function RootLayout() {
     SystemUI.setBackgroundColorAsync(colors.background);
   }, [colors.background]);
 
+  // Chỉ đổi màu icon, không mount <StatusBar>. Lần mount đầu, component đó gọi thêm setHidden,
+  // setColor và setTranslucent. Ở Expo Go, cờ edge-to-edge của RN đang tắt, nên ba lệnh này
+  // tô status bar thành dải màu đặc và đẩy app xuống dưới nó.
+  useEffect(() => {
+    StatusBar.setStyle(isDark ? 'light' : 'dark');
+  }, [isDark]);
+
   const navTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),
     colors: {
@@ -58,7 +65,6 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={navTheme}>
         <DialogProvider>
-        <StatusBar style={isDark ? 'light' : 'dark'} />
         <Stack
           screenLayout={({ navigation, children }) => (
             <SwipeBack enabled={navigation.canGoBack()} onBack={navigation.goBack}>

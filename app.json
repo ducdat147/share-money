@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#FF5733",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ducdat.sharemoney"
     },
     "android": {
       "package": "com.ducdat.sharemoney",
