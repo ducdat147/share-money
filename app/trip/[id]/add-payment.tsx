@@ -86,8 +86,15 @@ export default function AddPaymentScreen() {
         text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
-          await removePayment(id!, paymentId);
-          router.back();
+          setIsSubmitting(true);
+          try {
+            await removePayment(id!, paymentId);
+            router.back();
+          } catch {
+            showDialog(t('common.error'), t('add_payment.err_fail'));
+          } finally {
+            setIsSubmitting(false);
+          }
         },
       },
     ]);

@@ -46,7 +46,7 @@ export const DarkColors = {
   surfaceElevated: '#33332A',
   onSurfaceElevated: '#EDEBE2',
 
-  border: '#33332A',
+  border: '#45453A',
   borderLight: '#28281F',
 
   overlay: 'rgba(0, 0, 0, 0.7)',

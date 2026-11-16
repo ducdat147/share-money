@@ -205,8 +205,15 @@ export default function AddExpenseScreen() {
         text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
-          await removeExpense(id!, expenseId);
-          router.back();
+          setIsSubmitting(true);
+          try {
+            await removeExpense(id!, expenseId);
+            router.back();
+          } catch {
+            showDialog(t('common.error'), t('add_expense.err_fail'));
+          } finally {
+            setIsSubmitting(false);
+          }
         },
       },
     ]);
