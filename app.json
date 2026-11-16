@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#FF5733",
+    "backgroundColor": "#F5F3EC",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ducdat.sharemoney"
