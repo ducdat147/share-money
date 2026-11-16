@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { ThemeColors, Spacing, FontSize, FontWeight } from '@/constants/theme';
+import { ThemeColors, Spacing, FontSize, FontFamily } from '@/constants/theme';
 
 import ScalePressable from './ScalePressable';
 
@@ -62,7 +62,7 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
       textAlign: 'center',
       fontSize: FontSize.lg,
-      fontWeight: FontWeight.bold,
+      fontFamily: FontFamily.bold,
       color: colors.text,
     },
     titleButton: {
