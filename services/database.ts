@@ -1,5 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { Trip, TripSummary, Member, Expense, Payment } from '@/utils/types';
+import { buildSummaryCursorWhere, TripSummaryCursor } from '@/services/summaryCursor';
 
 const DB_NAME = 'share_money.db';
 
@@ -94,12 +95,7 @@ async function initTables(database: SQLite.SQLiteDatabase): Promise<void> {
 
 // ========== TRIPS ==========
 
-// Cursor for keyset pagination. `created_at` alone is not unique enough to be a
-// stable cursor, so `id` breaks ties — offsets would skip rows after a delete.
-export interface TripSummaryCursor {
-  createdAt: number;
-  id: string;
-}
+export type { TripSummaryCursor };
 
 export async function getTripSummaries(options: {
   limit?: number;
@@ -111,8 +107,9 @@ export async function getTripSummaries(options: {
   const params: (string | number)[] = [];
   let where = '';
   if (cursor) {
-    where = 'WHERE (t.created_at < ? OR (t.created_at = ? AND t.id < ?))';
-    params.push(cursor.createdAt, cursor.createdAt, cursor.id);
+    const after = buildSummaryCursorWhere(cursor);
+    where = `WHERE ${after.sql}`;
+    params.push(...after.params);
   }
 
   let limitClause = '';
@@ -146,7 +143,7 @@ export async function getTripSummaries(options: {
        (SELECT m.name FROM members m WHERE m.id = t.treasurer_id) AS treasurer_name
      FROM trips t
      ${where}
-     ORDER BY t.created_at DESC, t.id DESC
+     ORDER BY t.is_completed ASC, t.created_at DESC, t.id DESC
      ${limitClause}`,
     params,
   );

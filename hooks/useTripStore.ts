@@ -99,7 +99,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
     try {
       const next = await db.getTripSummaries({
         limit: SUMMARY_PAGE_SIZE,
-        cursor: { createdAt: last.createdAt, id: last.id },
+        cursor: { isCompleted: last.isCompleted, createdAt: last.createdAt, id: last.id },
       });
       set((state) => {
         // A focus refresh may have replaced the list while this page was in
