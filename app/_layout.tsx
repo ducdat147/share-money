@@ -10,9 +10,15 @@ import { useThemeStore } from '@/hooks/useThemeStore';
 import { DialogProvider } from '@/components/DialogProvider';
 import SwipeBack from '@/components/SwipeBack';
 import '@/utils/i18n';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-google-fonts/lexend';
+
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const { colors, isDark } = useAppTheme();
+  const [fontsLoaded, fontError] = useFonts({ Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold });
   const loadTheme = useThemeStore((s) => s.loadTheme);
 
   useEffect(() => {
@@ -48,6 +54,13 @@ export default function RootLayout() {
     StatusBar.setStyle(isDark ? 'light' : 'dark');
   }, [isDark]);
 
+  // Lỗi nạp font vẫn mở app (rơi về font hệ thống) thay vì kẹt ở splash.
+  const fontsReady = fontsLoaded || !!fontError;
+
+  useEffect(() => {
+    if (fontsReady) SplashScreen.hideAsync();
+  }, [fontsReady]);
+
   const navTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),
     colors: {
@@ -59,6 +72,8 @@ export default function RootLayout() {
       primary: colors.primary,
     },
   };
+
+  if (!fontsReady) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
