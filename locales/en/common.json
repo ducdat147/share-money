@@ -57,9 +57,7 @@
 		"increase": "Increase",
 		"more_options": "More options",
 		"badge_active": "Active",
-		"badge_completed": "Completed",
 		"deselect_all": "Deselect all",
-		"expense_count": "{{count}} expenses",
 		"member_count": "{{count}} members",
 		"note": "Note",
 		"paid_by": "Paid by",
@@ -68,7 +66,6 @@
 		"select_all": "Select all",
 		"select_at_least_one": "Select at least one person",
 		"split_equally": "Split equally among {{count}} people",
-		"total_expense": "Total Spent",
 		"split_custom_hint": "Type an amount per person; empty fields split the rest equally"
 	},
 	"create_trip": {
@@ -90,9 +87,11 @@
 		"add_trip": "Create Trip",
 		"empty_desc": "Create your first trip to get started!",
 		"empty_title": "No trips yet",
+		"new_trip": "New trip",
 		"search_placeholder": "Search trips...",
-		"stats_active": "{{count}} active",
-		"stats_trips": "{{count}} trips"
+		"status_active": "Active",
+		"status_done": "Done",
+		"title": "Trips"
 	},
 	"member_detail": {
 		"add_fund": "Add to fund",
