@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
 
 interface Props {
   visible: boolean;
@@ -102,7 +102,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     title: {
       fontSize: FontSize.lg,
-      fontWeight: FontWeight.bold,
+      fontFamily: FontFamily.bold,
       color: colors.text,
       marginBottom: Spacing.md,
     },
@@ -114,6 +114,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: Spacing.md,
       paddingVertical: Spacing.md,
       fontSize: FontSize.md,
+      fontFamily: FontFamily.regular,
       color: colors.text,
       marginBottom: Spacing.xl,
     },
@@ -139,7 +140,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     buttonText: {
       fontSize: FontSize.md,
-      fontWeight: FontWeight.semibold,
+      fontFamily: FontFamily.semibold,
     },
     cancelText: {
       color: colors.textSecondary,

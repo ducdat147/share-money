@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Member } from '@/utils/types';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
-import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
 import { CurrencyCode, parseAmountInput } from '@/utils/currency';
 import UserAvatar from './UserAvatar';
 
@@ -286,7 +286,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     title: {
       fontSize: FontSize.lg,
-      fontWeight: FontWeight.bold,
+      fontFamily: FontFamily.bold,
       color: colors.text,
     },
     avatarSection: {
@@ -300,13 +300,14 @@ const createStyles = (colors: ThemeColors) =>
     },
     label: {
       fontSize: FontSize.sm,
-      fontWeight: FontWeight.bold,
+      fontFamily: FontFamily.bold,
       color: colors.textSecondary,
       marginBottom: Spacing.xs,
       textTransform: 'uppercase',
     },
     hint: {
       fontSize: FontSize.xs,
+      fontFamily: FontFamily.regular,
       color: colors.textMuted,
       marginBottom: Spacing.sm,
     },
@@ -316,6 +317,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: Spacing.md,
       paddingVertical: Spacing.sm,
       fontSize: FontSize.md,
+      fontFamily: FontFamily.regular,
       color: colors.text,
       borderWidth: 1,
       borderColor: colors.border,
@@ -341,6 +343,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     lockedHint: {
       fontSize: FontSize.sm,
+      fontFamily: FontFamily.regular,
       color: colors.textMuted,
       marginBottom: Spacing.xl,
     },
@@ -351,7 +354,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     optionText: {
       fontSize: FontSize.md,
-      fontWeight: FontWeight.semibold,
+      fontFamily: FontFamily.semibold,
       color: colors.text,
     },
     optionTextActive: {
@@ -371,7 +374,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     saveBtnText: {
       fontSize: FontSize.md,
-      fontWeight: FontWeight.bold,
+      fontFamily: FontFamily.bold,
       color: colors.onPrimary,
     },
     removeBtn: {
@@ -384,7 +387,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     removeBtnText: {
       fontSize: FontSize.md,
-      fontWeight: FontWeight.semibold,
+      fontFamily: FontFamily.semibold,
       color: colors.danger,
     },
   });
