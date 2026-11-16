@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
 import { CurrencyCode, parseAmountInput } from '@/utils/currency';
 import UserAvatar from './UserAvatar';
+import { DialogOutlet, useDismissDialog } from '@/components/DialogProvider';
 
 // Bản build bật edge-to-edge nên cửa sổ Dialog của Modal không co lại khi bàn phím mở
 // (adjustResize mất tác dụng), sheet nằm dưới bàn phím. Expo Go tắt edge-to-edge, cửa sổ tự co,
@@ -59,6 +60,7 @@ export default function MemberDetailModal({
   onRemove,
 }: MemberDetailModalProps) {
   const { colors } = useAppTheme();
+  const dismissDialog = useDismissDialog();
   const { t } = useTranslation();
   const styles = createStyles(colors);
 
@@ -158,8 +160,13 @@ export default function MemberDetailModal({
 
   if (!showModal && !visible) return null;
 
+  // Nút back Android đóng hộp thoại đang hiện trong modal trước.
+  const handleRequestClose = () => {
+    if (!dismissDialog()) handleClose();
+  };
+
   return (
-    <Modal visible={showModal} transparent animationType="none" onRequestClose={handleClose}>
+    <Modal visible={showModal} transparent animationType="none" onRequestClose={handleRequestClose}>
       <View style={styles.container}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose}>
           <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]} />
@@ -251,6 +258,7 @@ export default function MemberDetailModal({
             )}
           </Animated.View>
         </KeyboardAvoidingView>
+        <DialogOutlet />
       </View>
     </Modal>
   );
