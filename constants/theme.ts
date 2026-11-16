@@ -1,51 +1,8 @@
 /**
  * Design System - Theme Configuration
- * Quản lý màu sắc tập trung theo nguyên tắc Material Design
- * Đảm bảo độ tương phản (Contrast) và dễ bảo trì.
+ * Bộ G "Ô liu & cát": nền cát ấm, nhấn ô liu. Mọi cặp chữ/nền chính đạt WCAG AA 4.5:1
+ * (xem utils/__tests__/color.test.ts).
  */
-
-const Palette = {
-  // Travel Adventure Colors
-  coral: {
-    50: '#FFF5F2',
-    100: '#FFEBE5',
-    200: '#FFD1C2',
-    300: '#FFA88F',
-    400: '#FF7552',
-    500: '#FF5733', // Primary - Coral
-    600: '#E64E2E',
-    700: '#BF4126',
-    800: '#99341F',
-    900: '#732717',
-  },
-  forest: {
-    500: '#2D6A4F', // Secondary - Green
-    600: '#1B4332',
-  },
-  sun: {
-    400: '#FFD522', // Lighter yellow — accent/warning in Dark Mode
-    500: '#FFB703', // Accent - Yellow
-    600: '#FB8500',
-  },
-  sky: {
-    500: '#219EBC',
-    600: '#023047',
-  },
-  // Neutrals
-  slate: {
-    50: '#F8FAFC',
-    100: '#F1F5F9',
-    200: '#E2E8F0',
-    300: '#CBD5E1',
-    400: '#94A3B8',
-    500: '#64748B',
-    600: '#475569',
-    700: '#334155',
-    800: '#1E293B',
-    900: '#0F172A',
-    950: '#020617',
-  },
-};
 
 const CommonColors = {
   white: '#FFFFFF',
@@ -55,99 +12,99 @@ const CommonColors = {
 
 export const DarkColors = {
   // Brand
-  primary: '#FF6B4A', // Slightly more vibrant coral for Dark Mode
-  primaryLight: Palette.coral[300],
-  primaryDark: Palette.coral[600],
-  onPrimary: CommonColors.white,
+  primary: '#A3E635',
+  primaryLight: '#BEF264',
+  primaryDark: '#84CC16',
+  onPrimary: '#14140F',
 
-  secondary: '#3DA57A', // More vibrant forest green for Dark Mode
-  onSecondary: CommonColors.white,
+  secondary: '#A8B58A', // Xanh xô thơm
+  onSecondary: '#14140F',
 
-  accent: Palette.sun[400],
-  accentLight: Palette.sun[500],
-  onAccent: CommonColors.white,
+  accent: '#E5B94E', // Vàng cát
+  accentLight: '#F2D488',
+  onAccent: '#14140F',
 
   // Status
-  success: '#3DA57A',
-  onSuccess: CommonColors.white,
-  warning: Palette.sun[400],
-  onWarning: Palette.slate[900],
-  danger: '#FF5252',
-  onDanger: CommonColors.white,
-  info: '#4FC3F7',
-  onInfo: CommonColors.white,
+  success: '#4ADE80',
+  onSuccess: '#14140F',
+  warning: '#FBBF24',
+  onWarning: '#14140F',
+  danger: '#F87171',
+  onDanger: '#14140F',
+  info: '#6BB8CC',
+  onInfo: '#14140F',
 
   // Surfaces & Backgrounds
-  background: '#0B0F1A', // Deeper blue-slate
-  onBackground: '#F8FAFC',
-  
-  surface: '#151C2C', // Slightly lighter than background
-  onSurface: '#F1F5F9',
-  onSurfaceSecondary: '#94A3B8',
-  onSurfaceMuted: '#64748B',
-  
-  surfaceElevated: '#1E293B',
-  onSurfaceElevated: '#F1F5F9',
+  background: '#14140F',
+  onBackground: '#EDEBE2',
 
-  border: '#2D3748',
-  borderLight: '#1A202C',
+  surface: '#1E1E17',
+  onSurface: '#EDEBE2',
+  onSurfaceSecondary: '#B5B2A3',
+  onSurfaceMuted: '#8A8778',
 
-  overlay: 'rgba(0, 0, 0, 0.75)',
-  cardGradientStart: '#151C2C',
-  cardGradientEnd: '#0B0F1A',
+  surfaceElevated: '#33332A',
+  onSurfaceElevated: '#EDEBE2',
 
-  text: '#F8FAFC',
-  textSecondary: '#94A3B8',
-  textMuted: '#64748B',
-  textInverse: '#0F172A',
+  border: '#33332A',
+  borderLight: '#28281F',
+
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  cardGradientStart: '#1E1E17',
+  cardGradientEnd: '#14140F',
+
+  text: '#EDEBE2',
+  textSecondary: '#B5B2A3',
+  textMuted: '#8A8778',
+  textInverse: '#14140F',
 };
 
 export const LightColors: ThemeColors = {
   // Brand
-  primary: Palette.coral[500],
-  primaryLight: Palette.coral[300],
-  primaryDark: Palette.coral[600],
+  primary: '#4D7C0F',
+  primaryLight: '#BFD98F',
+  primaryDark: '#3A5F0B',
   onPrimary: CommonColors.white,
 
-  secondary: Palette.forest[500],
+  secondary: '#6B5B3A', // Nâu đất
   onSecondary: CommonColors.white,
 
-  accent: Palette.sun[500],
-  accentLight: Palette.sun[600],
+  accent: '#B7791F',
+  accentLight: '#E2B65A',
   onAccent: CommonColors.white,
 
   // Status
-  success: Palette.forest[500],
+  success: '#15803D',
   onSuccess: CommonColors.white,
-  warning: Palette.sun[500],
+  warning: '#B45309',
   onWarning: CommonColors.white,
-  danger: '#EF4444',
+  danger: '#B91C1C',
   onDanger: CommonColors.white,
-  info: Palette.sky[500],
+  info: '#0E7490',
   onInfo: CommonColors.white,
 
   // Surfaces & Backgrounds
-  background: '#FFFBF9', // Nền hơi ngả màu kem nhẹ cho cảm giác du lịch
-  onBackground: Palette.slate[900],
-  
-  surface: CommonColors.white,
-  onSurface: Palette.slate[900],
-  onSurfaceSecondary: Palette.slate[600],
-  onSurfaceMuted: Palette.slate[400],
-  
-  surfaceElevated: '#FFF1ED',
-  onSurfaceElevated: Palette.slate[900],
+  background: '#F5F3EC',
+  onBackground: '#2B2A22',
 
-  border: '#F2E8E5',
-  borderLight: '#FBF2F0',
+  surface: '#FBFAF6',
+  onSurface: '#2B2A22',
+  onSurfaceSecondary: '#5E5B4C',
+  onSurfaceMuted: '#6F6C5B',
 
-  overlay: 'rgba(0, 0, 0, 0.4)',
-  cardGradientStart: CommonColors.white,
-  cardGradientEnd: '#FFFBF9',
+  surfaceElevated: '#EAE6D9',
+  onSurfaceElevated: '#2B2A22',
 
-  text: Palette.slate[900],
-  textSecondary: Palette.slate[600],
-  textMuted: Palette.slate[400],
+  border: '#E4E0D3',
+  borderLight: '#EFECE1',
+
+  overlay: 'rgba(20, 20, 15, 0.45)',
+  cardGradientStart: '#FBFAF6',
+  cardGradientEnd: '#F5F3EC',
+
+  text: '#2B2A22',
+  textSecondary: '#5E5B4C',
+  textMuted: '#6F6C5B',
   textInverse: CommonColors.white,
 };
 
@@ -194,3 +151,10 @@ export const FontWeight = {
   bold: '700' as const,
   extrabold: '800' as const,
 };
+
+// Android không chọn được file font theo fontWeight, nên mỗi độ đậm trỏ tới một file riêng.
+export const FontFamily = {
+  regular: 'Lexend_400Regular',
+  semibold: 'Lexend_600SemiBold',
+  bold: 'Lexend_700Bold',
+} as const;
