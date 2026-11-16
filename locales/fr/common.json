@@ -11,7 +11,6 @@
 		"participants_label": "Participants au partage",
 		"payer_label": "Payé par",
 		"payer_placeholder": "Sélectionner le payeur...",
-		"per_person": "{{amount}}/personne",
 		"submit": "Ajouter la dépense",
 		"submitting": "Ajout en cours...",
 		"title": "Ajouter une dépense",
@@ -19,7 +18,6 @@
 		"update_title": "Modifier la dépense",
 		"err_shares_exceed": "Les montants fixés dépassent le total de la dépense",
 		"err_shares_mismatch": "La somme des montants doit égaler le total de la dépense",
-		"custom_split": "Répartition personnalisée",
 		"err_shares_no_remainder": "Les montants fixés épuisent le total ; désélectionnez les personnes qui ne doivent rien"
 	},
 	"add_payment": {
@@ -62,7 +60,6 @@
 		"note": "Note",
 		"paid_by": "Payé par",
 		"participants_count": "Participants ({{selected}}/{{total}})",
-		"payer_prefix": "Payé par : ",
 		"select_all": "Tout sélectionner",
 		"select_at_least_one": "Sélectionnez au moins une personne",
 		"split_equally": "Partagé à parts égales entre {{count}} personnes",
@@ -97,6 +94,7 @@
 		"add_fund_desc": "Saisissez le montant que ce membre verse à la cagnotte",
 		"is_treasurer": "Est trésorier",
 		"name_label": "Nom du membre",
+		"remove": "Retirer le membre",
 		"save_success": "Membre mis à jour",
 		"set_treasurer": "Nommer trésorier",
 		"title": "Détails du membre",
@@ -169,12 +167,11 @@
 		"treasurer_debt": "À rendre au groupe"
 	},
 	"trip_detail": {
-		"action_add_expense": "Ajouter une dépense",
-		"action_add_payment": "Recevoir",
 		"action_complete": "Terminer",
 		"action_delete": "Supprimer le voyage",
-		"action_summary": "Récapitulatif",
 		"add_member_placeholder": "Ajouter un membre...",
+		"add_member_submit": "Ajouter",
+		"add_member_title": "Ajouter un membre",
 		"alert_change_treasurer_desc": "Nommer {{name}} nouveau trésorier ?",
 		"alert_change_treasurer_title": "Changer de trésorier",
 		"alert_complete_desc": "Une fois le voyage terminé, vous ne pourrez plus le modifier. Continuer ?",
@@ -198,14 +195,19 @@
 		"err_remove_treasurer": "Impossible de retirer le trésorier",
 		"err_rename": "Impossible de renommer le voyage",
 		"err_treasurer_holds_fund": "{{name}} est le trésorier et détient la cagnotte du groupe. Supprimez d'abord les cotisations, puis retirez le membre.",
-		"expense_items": "{{count}} dépenses",
+		"expense_meta": "{{payer}} a payé · {{count}} membres",
+		"fab_expense": "Dépense",
+		"fab_member": "Membre",
+		"fab_payment": "Cotisation",
+		"fund_left": "Reste en caisse {{amount}} · tenue par {{name}}",
 		"member_fund_btn": "Cotisation",
-		"members_count_label": "Membres",
 		"need_pay": "À payer :",
 		"paid": "Payé :",
-		"payment_items": "{{count}} cotisations",
 		"rename_title": "Renommer le voyage",
-		"total_expense": "Total dépensé",
-		"total_payment": "Collecté"
+		"see_settlement": "Qui paie qui ›",
+		"tab_expenses": "Dépenses",
+		"tab_members": "Membres",
+		"tab_payments": "Cagnotte",
+		"total_with_members": "Total dépensé · {{count}} membres"
 	}
 }

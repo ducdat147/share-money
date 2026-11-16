@@ -41,6 +41,8 @@ interface MemberDetailModalProps {
   onUpdateName: (name: string) => Promise<void>;
   onToggleTreasurer: () => Promise<void>;
   onAddFund: (amount: number) => Promise<void>;
+  /** Không truyền thì ẩn nút xoá, ví dụ chuyến đã xong. */
+  onRemove?: () => void;
 }
 
 export default function MemberDetailModal({
@@ -54,6 +56,7 @@ export default function MemberDetailModal({
   onUpdateName,
   onToggleTreasurer,
   onAddFund,
+  onRemove,
 }: MemberDetailModalProps) {
   const { colors } = useAppTheme();
   const { t } = useTranslation();
@@ -239,6 +242,13 @@ export default function MemberDetailModal({
                 {isSaving ? t('common.submitting') : t('common.save')}
               </Text>
             </TouchableOpacity>
+
+            {onRemove && (
+              <TouchableOpacity style={styles.removeBtn} onPress={onRemove} disabled={isSaving}>
+                <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                <Text style={styles.removeBtnText}>{t('member_detail.remove')}</Text>
+              </TouchableOpacity>
+            )}
           </Animated.View>
         </KeyboardAvoidingView>
       </View>
@@ -363,5 +373,18 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: FontSize.md,
       fontWeight: FontWeight.bold,
       color: colors.onPrimary,
+    },
+    removeBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      paddingVertical: Spacing.md,
+      marginTop: Spacing.sm,
+    },
+    removeBtnText: {
+      fontSize: FontSize.md,
+      fontWeight: FontWeight.semibold,
+      color: colors.danger,
     },
   });

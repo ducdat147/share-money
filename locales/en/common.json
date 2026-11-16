@@ -11,7 +11,6 @@
 		"participants_label": "Participants to split",
 		"payer_label": "Paid by",
 		"payer_placeholder": "Select payer...",
-		"per_person": "{{amount}}/person",
 		"submit": "Add Expense",
 		"submitting": "Adding...",
 		"title": "Add Expense",
@@ -19,7 +18,6 @@
 		"update_title": "Edit Expense",
 		"err_shares_exceed": "Locked amounts exceed the expense total",
 		"err_shares_mismatch": "Each person's amounts must add up to the expense total",
-		"custom_split": "Custom split",
 		"err_shares_no_remainder": "Locked amounts use up the total; deselect the people who owe nothing"
 	},
 	"add_payment": {
@@ -62,7 +60,6 @@
 		"note": "Note",
 		"paid_by": "Paid by",
 		"participants_count": "Participants ({{selected}}/{{total}})",
-		"payer_prefix": "Paid by: ",
 		"select_all": "Select all",
 		"select_at_least_one": "Select at least one person",
 		"split_equally": "Split equally among {{count}} people",
@@ -97,6 +94,7 @@
 		"add_fund_desc": "Enter the amount this member is contributing to the fund",
 		"is_treasurer": "Is Treasurer",
 		"name_label": "Member Name",
+		"remove": "Remove member",
 		"save_success": "Member updated",
 		"set_treasurer": "Set as Treasurer",
 		"title": "Member Details",
@@ -169,12 +167,11 @@
 		"treasurer_debt": "Return to group"
 	},
 	"trip_detail": {
-		"action_add_expense": "Add Expense",
-		"action_add_payment": "Receive",
 		"action_complete": "Complete",
 		"action_delete": "Delete Trip",
-		"action_summary": "Summary",
 		"add_member_placeholder": "Add member...",
+		"add_member_submit": "Add",
+		"add_member_title": "Add member",
 		"alert_change_treasurer_desc": "Make {{name}} the new treasurer?",
 		"alert_change_treasurer_title": "Change Treasurer",
 		"alert_complete_desc": "Once completed, you cannot edit. Continue?",
@@ -198,14 +195,19 @@
 		"err_remove_treasurer": "Cannot remove the treasurer",
 		"err_rename": "Couldn't rename the trip",
 		"err_treasurer_holds_fund": "{{name}} is the treasurer holding the group's fund. Delete the fund payments first, then remove the member.",
-		"expense_items": "{{count}} expenses",
+		"expense_meta": "{{payer}} paid · {{count}} members",
+		"fab_expense": "Expense",
+		"fab_member": "Member",
+		"fab_payment": "Fund",
+		"fund_left": "Fund left {{amount}} · held by {{name}}",
 		"member_fund_btn": "Add fund",
-		"members_count_label": "Members",
 		"need_pay": "Need:",
 		"paid": "Paid:",
-		"payment_items": "{{count}} payments",
 		"rename_title": "Rename trip",
-		"total_expense": "Total Ext.",
-		"total_payment": "Collected"
+		"see_settlement": "Who pays whom ›",
+		"tab_expenses": "Expenses",
+		"tab_members": "Members",
+		"tab_payments": "Fund",
+		"total_with_members": "Total spent · {{count}} members"
 	}
 }

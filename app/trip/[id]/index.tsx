@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, TextInput,
+  View, StyleSheet, FlatList, ActivityIndicator, TextInput,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,12 +14,20 @@ import PaymentItem from '@/components/PaymentItem';
 import UserAvatar from '@/components/UserAvatar';
 import MemberDetailModal from '@/components/MemberDetailModal';
 import RenameTripDialog from '@/components/RenameTripDialog';
+import ScalePressable from '@/components/ScalePressable';
 import { useDialog } from '@/components/DialogProvider';
+import {
+  ActionMenu, ActionMenuItem, AppText, BottomSheet, Button, Card, FAB, ListRow, SegmentedControl,
+} from '@/components/ui';
 import { useTranslation } from 'react-i18next';
-import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
-import { formatCurrency, getTotalExpenses, getTotalPayments, calculateSummary } from '@/utils/calculator';
+import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
+import { formatCurrency, getTotalExpenses, calculateSummary } from '@/utils/calculator';
 
 type TabType = 'expenses' | 'payments' | 'members';
+
+// MemberDetailModal trượt xuống 250 ms rồi mới unmount. Mở hộp thoại xác nhận trước lúc đó thì iOS
+// bỏ qua nó, nên đợi Modal đóng hẳn.
+const MEMBER_MODAL_CLOSE_DELAY = 300;
 
 export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,12 +37,14 @@ export default function TripDetailScreen() {
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const {
-    trips, loadTrip, removeExpense, removePayment, completeTrip, deleteTrip, addMember, removeMember, updateTreasurer, updateMemberName, addPayment, updateTripName,
+    trips, loadTrip, completeTrip, deleteTrip, addMember, removeMember, updateTreasurer, updateMemberName, addPayment, updateTripName,
   } = useTripStore();
 
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
   const [isLoading, setIsLoading] = useState(true);
   const [newMemberName, setNewMemberName] = useState('');
+  const [addMemberError, setAddMemberError] = useState('');
+  const [isAddMemberVisible, setIsAddMemberVisible] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [isMemberModalVisible, setIsMemberModalVisible] = useState(false);
   const [isRenameVisible, setIsRenameVisible] = useState(false);
@@ -52,28 +62,13 @@ export default function TripDetailScreen() {
 
   const treasurer = useMemo(() => trip?.members.find((m) => m.id === trip.treasurerId), [trip]);
   const totalExpenses = useMemo(() => (trip ? getTotalExpenses(trip.expenses) : 0), [trip]);
-  const totalPayments = useMemo(() => (trip ? getTotalPayments(trip.payments) : 0), [trip]);
   const memberSummaries = useMemo(
     () => (trip ? calculateSummary(trip.members, trip.expenses, trip.payments, trip.treasurerId, trip.currency) : []),
     [trip],
   );
-
-  const handleDeleteExpense = useCallback(
-    (expenseId: string) => {
-      showDialog(t('trip_detail.alert_delete_expense_title'), t('trip_detail.alert_delete_expense_desc'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.delete'), style: 'destructive', onPress: () => removeExpense(id!, expenseId) },
-      ]);
-    }, [id, removeExpense, showDialog, t],
-  );
-
-  const handleDeletePayment = useCallback(
-    (paymentId: string) => {
-      showDialog(t('trip_detail.alert_delete_payment_title'), t('trip_detail.alert_delete_payment_desc'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.delete'), style: 'destructive', onPress: () => removePayment(id!, paymentId) },
-      ]);
-    }, [id, removePayment, showDialog, t],
+  const fundHeld = useMemo(
+    () => memberSummaries.find((s) => s.memberId === trip?.treasurerId)?.fundHeld ?? 0,
+    [memberSummaries, trip?.treasurerId],
   );
 
   const handleEditExpense = useCallback(
@@ -88,13 +83,22 @@ export default function TripDetailScreen() {
     }, [id, router],
   );
 
+  const openAddMember = useCallback(() => {
+    setNewMemberName('');
+    setAddMemberError('');
+    setIsAddMemberVisible(true);
+  }, []);
+
+  const closeAddMember = useCallback(() => setIsAddMemberVisible(false), []);
+
   const handleAddMember = useCallback(async () => {
     const name = newMemberName.trim();
     if (!name || !id) return;
     const exists = trip?.members.some((m) => m.name.toLowerCase() === name.toLowerCase());
-    if (exists) { showDialog(t('common.error'), t('trip_detail.err_member_exists')); return; }
+    // Báo lỗi ngay trong bảng: hộp thoại mở chồng lên Modal của bảng dễ không hiện trên iOS.
+    if (exists) { setAddMemberError(t('trip_detail.err_member_exists')); return; }
     await addMember(id, name);
-    setNewMemberName('');
+    setIsAddMemberVisible(false);
   }, [newMemberName, id, trip, addMember, t]);
 
   const handleRemoveMember = useCallback(
@@ -141,6 +145,13 @@ export default function TripDetailScreen() {
       );
     }, [id, trip, removeMember, updateTreasurer, showDialog, t],
   );
+
+  const handleRemoveSelected = useCallback(() => {
+    if (!selectedMember) return;
+    const member = selectedMember;
+    setIsMemberModalVisible(false);
+    setTimeout(() => handleRemoveMember(member), MEMBER_MODAL_CLOSE_DELAY);
+  }, [selectedMember, handleRemoveMember]);
 
   const handleMemberPress = useCallback((member: Member) => {
     setSelectedMember(member);
@@ -198,28 +209,61 @@ export default function TripDetailScreen() {
     ]);
   }, [trip, deleteTrip, router, showDialog, t]);
 
+  // Chuyến đã xong chỉ còn Xoá; không có "Mở lại".
+  const menuItems = useMemo<ActionMenuItem[]>(
+    () => (trip?.isCompleted
+      ? [{ label: t('trip_detail.action_delete'), icon: 'trash-outline', destructive: true, onPress: handleDeleteTrip }]
+      : [
+        { label: t('trip_detail.rename_title'), icon: 'pencil-outline', onPress: () => setIsRenameVisible(true) },
+        { label: t('trip_detail.action_complete'), icon: 'checkmark-done-outline', onPress: handleCompleteTrip },
+      ]),
+    [trip?.isCompleted, handleDeleteTrip, handleCompleteTrip, t],
+  );
+
+  const tabItems = useMemo(
+    () => [
+      { value: 'expenses' as const, label: t('trip_detail.tab_expenses') },
+      ...(treasurer ? [{ value: 'payments' as const, label: t('trip_detail.tab_payments') }] : []),
+      { value: 'members' as const, label: t('trip_detail.tab_members') },
+    ],
+    [treasurer, t],
+  );
+
+  const fab = useMemo(() => {
+    if (activeTab === 'expenses') {
+      return { label: t('trip_detail.fab_expense'), onPress: () => router.push(`/trip/${id}/add-expense`) };
+    }
+    if (activeTab === 'payments') {
+      return { label: t('trip_detail.fab_payment'), onPress: () => router.push(`/trip/${id}/add-payment`) };
+    }
+    return { label: t('trip_detail.fab_member'), onPress: openAddMember };
+  }, [activeTab, id, router, openAddMember, t]);
+
   const renderExpense = useCallback(
     ({ item }: { item: Expense }) => (
-      <ExpenseItem
-        expense={item}
-        members={trip?.members ?? []}
-        onDelete={trip?.isCompleted ? undefined : () => handleDeleteExpense(item.id)}
-        onEdit={trip?.isCompleted ? undefined : () => handleEditExpense(item.id)}
-        currencyCode={trip?.currency}
-      />
-    ), [trip, handleDeleteExpense, handleEditExpense],
+      <View style={styles.rowCard}>
+        <ExpenseItem
+          expense={item}
+          members={trip?.members ?? []}
+          treasurerId={trip?.treasurerId}
+          onEdit={trip?.isCompleted ? undefined : () => handleEditExpense(item.id)}
+          currencyCode={trip?.currency}
+        />
+      </View>
+    ), [trip, handleEditExpense, styles],
   );
 
   const renderPayment = useCallback(
     ({ item }: { item: Payment }) => (
-      <PaymentItem
-        payment={item}
-        members={trip?.members ?? []}
-        onDelete={trip?.isCompleted ? undefined : () => handleDeletePayment(item.id)}
-        onEdit={trip?.isCompleted ? undefined : () => handleEditPayment(item.id)}
-        currencyCode={trip?.currency}
-      />
-    ), [trip, handleDeletePayment, handleEditPayment],
+      <View style={styles.rowCard}>
+        <PaymentItem
+          payment={item}
+          members={trip?.members ?? []}
+          onEdit={trip?.isCompleted ? undefined : () => handleEditPayment(item.id)}
+          currencyCode={trip?.currency}
+        />
+      </View>
+    ), [trip, handleEditPayment, styles],
   );
 
   const renderMember = useCallback(
@@ -231,73 +275,64 @@ export default function TripDetailScreen() {
       const progress = totalShare > 0 ? Math.min(totalPaid / totalShare, 1) : (totalPaid > 0 ? 1 : 0);
       const isPaidFull = totalShare > 0 && totalPaid >= totalShare;
       const hasPaid = totalPaid > 0;
+      const canAddFund = !trip?.isCompleted && !isTreasurer && !!trip?.treasurerId;
 
       return (
-        <TouchableOpacity
-          style={styles.memberRow}
-          onPress={() => handleMemberPress(item)}
-          disabled={trip?.isCompleted}
-          activeOpacity={0.7}
-        >
-          {/* Header row */}
-          <View style={styles.memberHeader}>
-            <View style={styles.memberLeft}>
-              <UserAvatar 
-                name={item.name} 
-                isTreasurer={isTreasurer} 
-                size={36} 
-              />
-              <View>
-                <Text style={styles.memberName}>{item.name}</Text>
-                {isTreasurer && <Text style={styles.memberBadge}>{t('summary.treasurer')}</Text>}
-              </View>
-            </View>
-            <View style={styles.memberActions}>
-              {!trip?.isCompleted && !isTreasurer && trip?.treasurerId && (
-                <TouchableOpacity
-                  style={styles.addPaymentBtn}
-                  onPress={() => router.push(`/trip/${id}/add-payment?memberId=${item.id}`)}
-                  hitSlop={4}
-                >
-                  <Ionicons name="add" size={14} color={colors.onSuccess} />
-                  <Text style={styles.addPaymentBtnText}>{t('trip_detail.member_fund_btn')}</Text>
-                </TouchableOpacity>
-              )}
-              {!trip?.isCompleted && (
-
-                <TouchableOpacity onPress={() => handleRemoveMember(item)} hitSlop={8}>
-                  <Ionicons name="close-circle-outline" size={22} color={isTreasurer ? colors.textMuted : colors.danger} />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
+        <View style={styles.rowCard}>
+          <ListRow
+            left={<UserAvatar name={item.name} isTreasurer={isTreasurer} size={36} />}
+            title={item.name}
+            subtitle={isTreasurer ? t('summary.treasurer') : undefined}
+            onPress={trip?.isCompleted ? undefined : () => handleMemberPress(item)}
+          />
 
           {/* Payment progress - hide for treasurer */}
           {!isTreasurer && (
-            <View style={styles.paymentSummary}>
+            <View style={styles.memberFooter}>
               <View style={styles.paymentAmounts}>
-                <Text style={styles.paymentLabel}>
-                  {t('trip_detail.need_pay')} <Text style={styles.paymentValue}>{formatCurrency(totalShare, trip?.currency)}</Text>
-                </Text>
-                <Text style={[styles.paymentLabel, isPaidFull && styles.paymentPaidFull]}>
-                  {t('trip_detail.paid')} <Text style={[styles.paymentValue, isPaidFull && styles.paymentPaidFull]}>{formatCurrency(totalPaid, trip?.currency)}</Text>
-                </Text>
+                <AppText variant="caption" color={colors.textSecondary}>
+                  {t('trip_detail.need_pay')}{' '}
+                  <AppText variant="caption" weight="semibold" numeric>
+                    {formatCurrency(totalShare, trip?.currency)}
+                  </AppText>
+                </AppText>
+                <AppText variant="caption" color={isPaidFull ? colors.success : colors.textSecondary}>
+                  {t('trip_detail.paid')}{' '}
+                  <AppText variant="caption" weight="semibold" numeric color={isPaidFull ? colors.success : undefined}>
+                    {formatCurrency(totalPaid, trip?.currency)}
+                  </AppText>
+                </AppText>
               </View>
-              <View style={styles.progressBarBg}>
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    { width: `${Math.round(progress * 100)}%` as any },
-                    isPaidFull && styles.progressBarFull,
-                    !hasPaid && styles.progressBarEmpty,
-                  ]}
-                />
+              <View style={styles.progressRow}>
+                <View style={styles.progressBarBg}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { width: `${Math.round(progress * 100)}%` },
+                      isPaidFull && styles.progressBarFull,
+                      !hasPaid && styles.progressBarEmpty,
+                    ]}
+                  />
+                </View>
+                {canAddFund && (
+                  <ScalePressable
+                    style={styles.addPaymentBtn}
+                    onPress={() => router.push(`/trip/${id}/add-payment?memberId=${item.id}`)}
+                    hitSlop={4}
+                    accessibilityRole="button"
+                  >
+                    <Ionicons name="add" size={14} color={colors.onSuccess} />
+                    <AppText variant="caption" weight="semibold" color={colors.onSuccess}>
+                      {t('trip_detail.member_fund_btn')}
+                    </AppText>
+                  </ScalePressable>
+                )}
               </View>
             </View>
           )}
-        </TouchableOpacity>
+        </View>
       );
-    }, [trip, id, memberSummaries, handleRemoveMember, handleMemberPress, router, styles, colors],
+    }, [trip, id, memberSummaries, handleMemberPress, router, styles, colors, t],
   );
 
   if (isLoading || !trip) {
@@ -309,136 +344,84 @@ export default function TripDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <CustomHeader
         title={trip.name}
-        // Chuyến đã kết thúc thì khoá đổi tên, như các thao tác sửa khác.
-        onTitlePress={trip.isCompleted ? undefined : () => setIsRenameVisible(true)}
         rightAction={
-          <View style={styles.currencyBadge}>
-            <Text style={styles.currencyBadgeText}>
-              {trip.currency || 'VND'}
-            </Text>
+          <View style={styles.headerRight}>
+            <View style={styles.currencyBadge}>
+              <AppText variant="caption" weight="bold" color={colors.primary}>
+                {trip.currency || 'VND'}
+              </AppText>
+            </View>
+            <ActionMenu items={menuItems} />
           </View>
         }
       />
-      {/* Stats Header: mỗi thẻ là một tab, bấm thẻ nào thì danh sách bên dưới hiện nội dung của thẻ đó */}
-      <View style={styles.statsContainer} accessibilityRole="tablist">
-        <TouchableOpacity
-          style={styles.statCard}
-          onPress={() => setActiveTab('expenses')}
-          activeOpacity={0.8}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'expenses' }}
-        >
-          <Ionicons name="receipt-outline" size={20} color={colors.accent} />
-          <Text style={styles.statValue}>{formatCurrency(totalExpenses, trip.currency)}</Text>
-          <Text style={styles.statLabel}>{t('trip_detail.total_expense')}</Text>
-          <Text style={styles.statCount}>{t('trip_detail.expense_items', { count: trip.expenses.length })}</Text>
-          {activeTab === 'expenses' && <View style={styles.statIndicator} />}
-        </TouchableOpacity>
-        {treasurer && (
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() => setActiveTab('payments')}
-            activeOpacity={0.8}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: activeTab === 'payments' }}
-          >
-            <Ionicons name="cash-outline" size={20} color={colors.success} />
-            <Text style={styles.statValue}>{formatCurrency(totalPayments, trip.currency)}</Text>
-            <Text style={styles.statLabel}>{t('trip_detail.total_payment')}</Text>
-            <Text style={styles.statCount}>{t('trip_detail.payment_items', { count: trip.payments.length })}</Text>
-            {activeTab === 'payments' && <View style={styles.statIndicator} />}
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={styles.statCard}
-          onPress={() => setActiveTab('members')}
-          activeOpacity={0.8}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'members' }}
-        >
-          <Ionicons name="people-outline" size={20} color={colors.primaryLight} />
-          <Text style={styles.statValue}>{trip.members.length}</Text>
-          <Text style={styles.statLabel}>{t('trip_detail.members_count_label')}</Text>
-          {activeTab === 'members' && <View style={styles.statIndicator} />}
-        </TouchableOpacity>
-      </View>
 
-      {treasurer && (
-        <View style={styles.treasurerInfo}>
-          <Ionicons name="wallet" size={16} color={colors.accentLight} />
-          <Text style={styles.treasurerText}>{t('summary.treasurer')}: {treasurer.name}</Text>
-        </View>
-      )}
+      <View style={styles.top}>
+        <Card style={styles.totalCard}>
+          <AppText variant="label" color={colors.textSecondary}>
+            {t('trip_detail.total_with_members', { count: trip.members.length })}
+          </AppText>
+          <AppText variant="hero" weight="bold" numeric numberOfLines={1} adjustsFontSizeToFit>
+            {formatCurrency(totalExpenses, trip.currency)}
+          </AppText>
+          {treasurer && (
+            <AppText variant="label" color={colors.textSecondary} numeric>
+              {t('trip_detail.fund_left', { amount: formatCurrency(fundHeld, trip.currency), name: treasurer.name })}
+            </AppText>
+          )}
+          <View style={styles.totalAction}>
+            <Button
+              variant="ghost"
+              title={t('trip_detail.see_settlement')}
+              onPress={() => router.push(`/trip/${id}/summary`)}
+            />
+          </View>
+        </Card>
+
+        <SegmentedControl items={tabItems} value={activeTab} onChange={setActiveTab} />
+      </View>
 
       {/* List */}
       {activeTab === 'expenses' ? (
         <FlatList data={trip.expenses} renderItem={renderExpense} keyExtractor={(item) => item.id} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}
-          ListEmptyComponent={<View style={styles.emptyTab}><Text style={styles.emptyTabText}>{t('trip_detail.empty_expenses')}</Text></View>}
+          ListEmptyComponent={<View style={styles.emptyTab}><AppText color={colors.textMuted}>{t('trip_detail.empty_expenses')}</AppText></View>}
         />
       ) : activeTab === 'payments' ? (
         <FlatList data={trip.payments} renderItem={renderPayment} keyExtractor={(item) => item.id} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}
-          ListEmptyComponent={<View style={styles.emptyTab}><Text style={styles.emptyTabText}>{t('trip_detail.empty_payments')}</Text></View>}
+          ListEmptyComponent={<View style={styles.emptyTab}><AppText color={colors.textMuted}>{t('trip_detail.empty_payments')}</AppText></View>}
         />
       ) : (
-        <FlatList data={trip.members} renderItem={renderMember} keyExtractor={(item) => item.id} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
-          ListHeaderComponent={
-            !trip.isCompleted ? (
-              <View style={styles.addMemberRow}>
-                <TextInput style={styles.addMemberInput} value={newMemberName} onChangeText={setNewMemberName}
-                  placeholder={t('trip_detail.add_member_placeholder')} placeholderTextColor={colors.textMuted} onSubmitEditing={handleAddMember} returnKeyType="done" />
-                <TouchableOpacity onPress={handleAddMember} disabled={!newMemberName.trim()}>
-                  <Ionicons name="add-circle" size={36} color={newMemberName.trim() ? colors.primary : colors.textMuted} />
-                </TouchableOpacity>
-              </View>
-            ) : undefined
-          }
-        />
+        <FlatList data={trip.members} renderItem={renderMember} keyExtractor={(item) => item.id} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false} />
       )}
 
-      {/* Bottom Actions */}
-      <View style={styles.bottomActions}>
-        {!trip.isCompleted && (
-          <TouchableOpacity 
-            style={[styles.actionBtn, styles.expenseBtn, styles.primaryBtn]} 
-            onPress={() => router.push(`/trip/${id}/add-expense`)} 
-            activeOpacity={0.8} 
-          >
-            <Ionicons name="add-circle" size={24} color={colors.onPrimary} />
-            <Text style={[styles.actionBtnText, styles.primaryBtnText, { color: colors.onPrimary }]}>
-              {t('trip_detail.action_add_expense')}
-            </Text>
-          </TouchableOpacity>
-        )}
+      {!trip.isCompleted && <FAB label={fab.label} onPress={fab.onPress} />}
 
-        <View style={styles.secondaryActionsRow}>
-          {treasurer && !trip.isCompleted && (
-            <TouchableOpacity style={[styles.actionBtn, styles.secondaryBtn, styles.paymentBtn]} onPress={() => router.push(`/trip/${id}/add-payment`)} activeOpacity={0.8}>
-              <Ionicons name="cash" size={18} color={colors.onSuccess} />
-              <Text style={[styles.actionBtnText, { color: colors.onSuccess }]}>{t('trip_detail.action_add_payment')}</Text>
-            </TouchableOpacity>
-          )}
-          
-          <TouchableOpacity style={[styles.actionBtn, styles.secondaryBtn, styles.summaryBtn]} onPress={() => router.push(`/trip/${id}/summary`)} activeOpacity={0.8}>
-            <Ionicons name="bar-chart" size={18} color={colors.onSurfaceElevated} />
-            <Text style={[styles.actionBtnText, { color: colors.onSurfaceElevated }]}>{t('trip_detail.action_summary')}</Text>
-          </TouchableOpacity>
-
-          {!trip.isCompleted ? (
-            <TouchableOpacity style={[styles.actionBtn, styles.secondaryBtn, styles.completeBtn]} onPress={handleCompleteTrip} activeOpacity={0.8}>
-              <Ionicons name="checkmark-done" size={18} color={colors.onDanger} />
-              <Text style={[styles.actionBtnText, { color: colors.onDanger }]}>{t('trip_detail.action_complete')}</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={[styles.actionBtn, styles.secondaryBtn, styles.deleteBtnStyle]} onPress={handleDeleteTrip} activeOpacity={0.8}>
-              <Ionicons name="trash" size={18} color={colors.onDanger} />
-              <Text style={[styles.actionBtnText, { color: colors.onDanger }]}>{t('trip_detail.action_delete')}</Text>
-            </TouchableOpacity>
-          )}
+      <BottomSheet visible={isAddMemberVisible} onRequestClose={closeAddMember}>
+        <View style={styles.sheetContent}>
+          <AppText variant="title" weight="bold">{t('trip_detail.add_member_title')}</AppText>
+          <TextInput
+            style={styles.input}
+            value={newMemberName}
+            onChangeText={(text) => { setNewMemberName(text); setAddMemberError(''); }}
+            placeholder={t('trip_detail.add_member_placeholder')}
+            placeholderTextColor={colors.textMuted}
+            onSubmitEditing={handleAddMember}
+            returnKeyType="done"
+            autoFocus
+          />
+          {addMemberError ? (
+            <AppText variant="label" color={colors.danger}>{addMemberError}</AppText>
+          ) : null}
+          <Button
+            title={t('trip_detail.add_member_submit')}
+            onPress={handleAddMember}
+            disabled={!newMemberName.trim()}
+          />
         </View>
-      </View>
+      </BottomSheet>
 
       <MemberDetailModal
         visible={isMemberModalVisible}
@@ -451,6 +434,7 @@ export default function TripDetailScreen() {
         onUpdateName={handleUpdateMemberName}
         onToggleTreasurer={handleToggleTreasurer}
         onAddFund={handleAddFund}
+        onRemove={trip.isCompleted ? undefined : handleRemoveSelected}
       />
 
       <RenameTripDialog
@@ -466,120 +450,55 @@ export default function TripDetailScreen() {
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
+    headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
     currencyBadge: {
       paddingHorizontal: Spacing.sm,
-      paddingVertical: 4,
+      paddingVertical: Spacing.xs,
       borderRadius: BorderRadius.sm,
       backgroundColor: colors.surfaceElevated,
       borderWidth: 1,
       borderColor: colors.border,
-      marginRight: Spacing.xs,
-    },
-    currencyBadgeText: {
-      fontSize: FontSize.xs,
-      fontWeight: 'bold',
-      color: colors.primary,
     },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
-    statsContainer: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
-    statCard: {
-      flex: 1, backgroundColor: colors.surface, borderRadius: BorderRadius.md, padding: Spacing.md,
-      alignItems: 'center', gap: Spacing.xs, borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
-    },
-    statValue: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: colors.onSurface },
-    statLabel: { fontSize: FontSize.xs, color: colors.onSurfaceSecondary },
-    statCount: { fontSize: FontSize.xs, color: colors.onSurfaceMuted },
-    // Vạch dưới thẻ đang chọn; overflow của statCard cắt nó theo góc bo.
-    statIndicator: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, backgroundColor: colors.primary },
-    treasurerInfo: {
-      flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginHorizontal: Spacing.lg,
-      marginBottom: Spacing.sm, backgroundColor: colors.surfaceElevated,
-      paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: BorderRadius.sm,
-    },
-    treasurerText: { fontSize: FontSize.sm, color: colors.accentLight, fontWeight: FontWeight.medium },
-    listContent: { paddingHorizontal: Spacing.lg, flexGrow: 1 },
+    top: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md, gap: Spacing.md },
+    totalCard: { gap: Spacing.xs },
+    totalAction: { marginTop: Spacing.xs },
+    // Chừa chỗ cho FAB để dòng cuối không bị che.
+    listContent: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xxl * 3, flexGrow: 1 },
     emptyTab: { paddingTop: 60, alignItems: 'center' },
-    emptyTabText: { fontSize: FontSize.md, color: colors.onSurfaceMuted },
-    addMemberRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md },
-    addMemberInput: {
-      flex: 1, backgroundColor: colors.surface, borderRadius: BorderRadius.md,
-      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, fontSize: FontSize.md,
-      color: colors.onSurface, borderWidth: 1, borderColor: colors.border,
+    rowCard: {
+      backgroundColor: colors.surface, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: colors.border,
+      marginBottom: Spacing.sm, overflow: 'hidden',
     },
-    // Member card
-    memberRow: {
-      backgroundColor: colors.surface, borderRadius: BorderRadius.md, padding: Spacing.md,
-      marginBottom: Spacing.sm, borderWidth: 1, borderColor: colors.border, gap: Spacing.sm,
-    },
-    memberHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    memberLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flex: 1 },
-    memberActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-    memberName: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: colors.onSurface },
-    memberBadge: { fontSize: FontSize.xs, color: colors.accentLight, fontWeight: FontWeight.bold, marginTop: 2 },
-    // Quick add payment button
-    addPaymentBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 3,
-      backgroundColor: colors.success, borderRadius: BorderRadius.sm,
-      paddingHorizontal: Spacing.sm, paddingVertical: 4,
-    },
-    addPaymentBtnText: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: colors.onSuccess },
     // Payment summary per member
-    paymentSummary: { gap: Spacing.xs },
+    memberFooter: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md, gap: Spacing.xs },
     paymentAmounts: { flexDirection: 'row', justifyContent: 'space-between' },
-    paymentLabel: { fontSize: FontSize.xs, color: colors.onSurfaceSecondary },
-    paymentValue: { fontWeight: FontWeight.semibold, color: colors.onSurface },
-    paymentPaidFull: { color: colors.success },
+    progressRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
     progressBarBg: {
-      height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden',
+      flex: 1, height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden',
     },
     progressBarFill: {
       height: '100%', backgroundColor: colors.primary, borderRadius: 3,
     },
     progressBarFull: { backgroundColor: colors.success },
     progressBarEmpty: { backgroundColor: 'transparent' },
-    // Bottom actions
-    bottomActions: {
-      paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.md,
-      paddingBottom: Spacing.sm,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
+    // Quick add payment button
+    addPaymentBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 3,
+      backgroundColor: colors.success, borderRadius: BorderRadius.sm,
+      paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
+    },
+    // Add member sheet
+    sheetContent: { gap: Spacing.md },
+    input: {
       backgroundColor: colors.background,
-    },
-    secondaryActionsRow: {
-      flexDirection: 'row',
-      gap: Spacing.sm,
-      marginTop: Spacing.sm,
-    },
-    actionBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.xs,
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: Spacing.sm,
       borderRadius: BorderRadius.md,
-      justifyContent: 'center',
-    },
-    secondaryBtn: {
-      flex: 1,
-    },
-    primaryBtn: {
-      width: '100%',
+      paddingHorizontal: Spacing.lg,
       paddingVertical: Spacing.md,
-      marginBottom: Spacing.xs,
-    },
-    actionBtnText: {
-      fontSize: FontSize.xs,
-      fontWeight: FontWeight.semibold,
-    },
-    primaryBtnText: {
       fontSize: FontSize.md,
-      fontWeight: FontWeight.bold,
+      fontFamily: FontFamily.regular,
+      color: colors.text,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
-    expenseBtn: { backgroundColor: colors.primary },
-    paymentBtn: { backgroundColor: colors.success },
-    summaryBtn: { backgroundColor: colors.surfaceElevated },
-    completeBtn: { backgroundColor: colors.danger },
-    deleteBtnStyle: { backgroundColor: colors.danger },
   });
-

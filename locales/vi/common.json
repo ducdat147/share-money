@@ -11,7 +11,6 @@
 		"participants_label": "Người tham gia chia tiền",
 		"payer_label": "Người chi",
 		"payer_placeholder": "Chọn người chi...",
-		"per_person": "{{amount}}/người",
 		"submit": "Thêm khoản chi",
 		"submitting": "Đang thêm...",
 		"title": "Thêm chi tiêu",
@@ -19,7 +18,6 @@
 		"update_title": "Sửa chi tiêu",
 		"err_shares_exceed": "Tổng số tiền đã khoá vượt quá tổng chi tiêu",
 		"err_shares_mismatch": "Tổng số tiền từng người phải bằng tổng chi tiêu",
-		"custom_split": "Chia tuỳ chỉnh",
 		"err_shares_no_remainder": "Các phần đã khoá dùng hết tổng tiền, hãy bỏ chọn những người không phải trả"
 	},
 	"add_payment": {
@@ -62,7 +60,6 @@
 		"note": "Ghi chú",
 		"paid_by": "Trả bởi",
 		"participants_count": "Người tham gia ({{selected}}/{{total}})",
-		"payer_prefix": "Người chi: ",
 		"select_all": "Chọn tất cả",
 		"select_at_least_one": "Chọn ít nhất 1 người",
 		"split_equally": "Chia đều cho {{count}} người",
@@ -97,6 +94,7 @@
 		"add_fund_desc": "Nhập số tiền thành viên này đóng thêm vào quỹ",
 		"is_treasurer": "Làm thủ quỹ",
 		"name_label": "Tên thành viên",
+		"remove": "Xoá thành viên",
 		"save_success": "Đã cập nhật thông tin",
 		"set_treasurer": "Chỉ định thủ quỹ",
 		"title": "Thông tin thành viên",
@@ -169,12 +167,11 @@
 		"treasurer_debt": "Cần hoàn trả lại nhóm"
 	},
 	"trip_detail": {
-		"action_add_expense": "Chi tiêu",
-		"action_add_payment": "Nhận tiền",
 		"action_complete": "Kết thúc",
 		"action_delete": "Xóa",
-		"action_summary": "Tổng kết",
 		"add_member_placeholder": "Thêm thành viên...",
+		"add_member_submit": "Thêm",
+		"add_member_title": "Thêm thành viên",
 		"alert_change_treasurer_desc": "Bạn muốn chọn {{name}} làm thủ quỹ mới?",
 		"alert_change_treasurer_title": "Đổi thủ quỹ",
 		"alert_complete_desc": "Sau khi kết thúc sẽ không thể chỉnh sửa. Tiếp tục?",
@@ -198,14 +195,19 @@
 		"err_remove_treasurer": "Không thể xóa thủ quỹ",
 		"err_rename": "Không đổi được tên chuyến đi",
 		"err_treasurer_holds_fund": "{{name}} đang là thủ quỹ và đang giữ quỹ của nhóm. Hãy xóa các khoản đóng quỹ trước rồi mới xóa thành viên.",
-		"expense_items": "{{count}} khoản",
+		"expense_meta": "{{payer}} trả · {{count}} người",
+		"fab_expense": "Chi tiêu",
+		"fab_member": "Thành viên",
+		"fab_payment": "Đóng quỹ",
+		"fund_left": "Quỹ còn {{amount}} · {{name}} giữ",
 		"member_fund_btn": "Tiền đóng",
-		"members_count_label": "Thành viên",
 		"need_pay": "Cần:",
 		"paid": "Đã đóng:",
-		"payment_items": "{{count}} khoản",
 		"rename_title": "Đổi tên chuyến đi",
-		"total_expense": "Tổng chi",
-		"total_payment": "Đã thu"
+		"see_settlement": "Xem ai trả ai ›",
+		"tab_expenses": "Chi tiêu",
+		"tab_members": "Thành viên",
+		"tab_payments": "Quỹ",
+		"total_with_members": "Tổng chi · {{count}} người"
 	}
 }
