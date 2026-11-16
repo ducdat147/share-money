@@ -35,6 +35,7 @@ export interface Expense {
   description: string;
   amount: number;
   participants: string[]; // member ids
+  customShares?: Record<string, number>; // locked shares by member id; others split the remainder equally
   paidBy?: string; // member id of who paid
   createdAt: number;
 }

@@ -16,7 +16,10 @@
 		"submitting": "Adding...",
 		"title": "Add Expense",
 		"update_btn": "Update",
-		"update_title": "Edit Expense"
+		"update_title": "Edit Expense",
+		"err_shares_exceed": "Locked amounts exceed the expense total",
+		"err_shares_mismatch": "Each person's amounts must add up to the expense total",
+		"custom_split": "Custom split"
 	},
 	"add_payment": {
 		"amount_label": "Amount",
@@ -60,7 +63,8 @@
 		"select_all": "Select all",
 		"select_at_least_one": "Select at least one person",
 		"split_equally": "Split equally among {{count}} people",
-		"total_expense": "Total Spent"
+		"total_expense": "Total Spent",
+		"split_custom_hint": "Type an amount per person; empty fields split the rest equally"
 	},
 	"create_trip": {
 		"currency_label": "Currency",

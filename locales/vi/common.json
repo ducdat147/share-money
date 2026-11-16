@@ -16,7 +16,10 @@
 		"submitting": "Đang thêm...",
 		"title": "Thêm chi tiêu",
 		"update_btn": "Cập nhật",
-		"update_title": "Sửa chi tiêu"
+		"update_title": "Sửa chi tiêu",
+		"err_shares_exceed": "Tổng số tiền đã khoá vượt quá tổng chi tiêu",
+		"err_shares_mismatch": "Tổng số tiền từng người phải bằng tổng chi tiêu",
+		"custom_split": "Chia tuỳ chỉnh"
 	},
 	"add_payment": {
 		"amount_label": "Số tiền",
@@ -60,7 +63,8 @@
 		"select_all": "Chọn tất cả",
 		"select_at_least_one": "Chọn ít nhất 1 người",
 		"split_equally": "Chia đều cho {{count}} người",
-		"total_expense": "Tổng chi"
+		"total_expense": "Tổng chi",
+		"split_custom_hint": "Nhập số riêng cho từng người, ô trống tự chia đều phần còn lại"
 	},
 	"create_trip": {
 		"currency_label": "Đơn vị tiền tệ",

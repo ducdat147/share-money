@@ -82,6 +82,20 @@ Khoản chi trả từ quỹ, paid_by NULL           -> sum(balances) = -120.000
 
 ---
 
+## 📅 Cập Nhật (16-11-2026) — Tuỳ chỉnh số tiền từng người trong chi tiêu
+
+Chia đều làm thiệt người tiêu ít. Ví dụ bữa sáng 4 người: hủ tiếu 30k, phở 40k, hai tô bún riêu 35k. Nay mỗi dòng người tham gia ở form thêm/sửa chi tiêu có ô số tiền. Gõ số thì dòng đó khoá, hiện ổ khoá. Ô trống hiện phần chia đều làm placeholder; người không khoá chia đều phần còn lại. Xoá trống ô là mở khoá.
+
+* Bảng `expense_participants` có thêm cột `share REAL`, cả trong `CREATE TABLE` lẫn `ALTER TABLE` bọc try/catch. `NULL` là chia đều, nên chi tiêu cũ tính y như trước.
+* `Expense.customShares` chỉ chứa người bị khoá. [calculator.ts](../utils/calculator.ts) có `getExpenseShares`, chỗ duy nhất quy đổi chi tiêu ra phần tiền từng người. `calculateSummary`, `ExpenseItem`, `MemberSelector` đều gọi nó, đừng tự chia `amount / participants.length` nữa.
+* `getCustomSharesError` chặn hai trường hợp: tổng khoá vượt tổng tiền, hoặc khoá hết mà lệch tổng quá `0.01`. Lỗi hiện đỏ ngay dưới danh sách vì nút Lưu đã bị tắt.
+* Bỏ chọn rồi chọn lại một người thì người đó về chia đều. Danh sách chi tiêu hiện "Chia tuỳ chỉnh" thay cho "x/người" khi có khoá.
+* Chọn khoá từng người thay vì công tắc "Chia đều / Tuỳ chỉnh": công tắc không xử lý được "chỉnh vài người, còn lại chia đều".
+* ⚠️ Ô nhập nằm cuối form nên trên Android edge-to-edge bàn phím che mất. `add-expense` tự cuộn dòng đang nhập lên, lúc focus và sau `keyboardDidShow` (đợi `KeyboardAvoidingView` co xong). Thêm ô nhập ở cuối form khác thì làm tương tự.
+* Bộ test Jest đầu tiên của repo: [calculator.test.ts](../utils/__tests__/calculator.test.ts). Nó import `expect`/`test` từ `@jest/globals` vì `tsc` không nhận global của `@types/jest` với `expo/tsconfig.base`.
+
+---
+
 ## 📅 Cập Nhật (24-10-2026) — Nâng từ SDK 57 lên SDK 58
 
 Expo Go mới chỉ mở được app SDK 58. Dự án giờ chạy Expo 58.0.19, React Native 0.88.0 và React 19.3.0. Các gói còn lại được căn bằng `npx expo install --fix`.

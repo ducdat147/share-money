@@ -54,6 +54,7 @@ async function initTables(database: SQLite.SQLiteDatabase): Promise<void> {
     CREATE TABLE IF NOT EXISTS expense_participants (
       expense_id TEXT NOT NULL,
       member_id TEXT NOT NULL,
+      share REAL,
       PRIMARY KEY (expense_id, member_id),
       FOREIGN KEY (expense_id) REFERENCES expenses(id) ON DELETE CASCADE,
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
@@ -80,6 +81,12 @@ async function initTables(database: SQLite.SQLiteDatabase): Promise<void> {
 
   try {
     await database.execAsync("ALTER TABLE trips ADD COLUMN currency TEXT DEFAULT 'VND';");
+  } catch {
+    // Column might already exist, ignore error
+  }
+
+  try {
+    await database.execAsync('ALTER TABLE expense_participants ADD COLUMN share REAL;');
   } catch {
     // Column might already exist, ignore error
   }
@@ -299,7 +306,7 @@ async function getExpensesByTrip(tripId: string): Promise<Expense[]> {
 
   const expenses: Expense[] = [];
   for (const row of rows) {
-    const participants = await getExpenseParticipants(row.id);
+    const { participants, customShares } = await getExpenseParticipants(row.id);
     expenses.push({
       id: row.id,
       tripId: row.trip_id,
@@ -307,19 +314,29 @@ async function getExpensesByTrip(tripId: string): Promise<Expense[]> {
       amount: row.amount,
       paidBy: row.paid_by ?? undefined,
       participants,
+      customShares,
       createdAt: row.created_at,
     });
   }
   return expenses;
 }
 
-async function getExpenseParticipants(expenseId: string): Promise<string[]> {
+// A NULL share means the participant splits the remainder equally.
+async function getExpenseParticipants(
+  expenseId: string,
+): Promise<{ participants: string[]; customShares?: Record<string, number> }> {
   const database = await getDatabase();
-  const rows = await database.getAllAsync<{ member_id: string }>(
-    'SELECT member_id FROM expense_participants WHERE expense_id = ?',
+  const rows = await database.getAllAsync<{ member_id: string; share: number | null }>(
+    'SELECT member_id, share FROM expense_participants WHERE expense_id = ?',
     [expenseId],
   );
-  return rows.map((r) => r.member_id);
+  const locked = rows.filter((r) => r.share !== null);
+  return {
+    participants: rows.map((r) => r.member_id),
+    customShares: locked.length > 0
+      ? Object.fromEntries(locked.map((r) => [r.member_id, r.share as number]))
+      : undefined,
+  };
 }
 
 export async function insertExpense(
@@ -329,6 +346,7 @@ export async function insertExpense(
   amount: number,
   participants: string[],
   paidBy?: string,
+  customShares?: Record<string, number>,
 ): Promise<void> {
   const database = await getDatabase();
   await database.runAsync(
@@ -337,8 +355,8 @@ export async function insertExpense(
   );
   for (const memberId of participants) {
     await database.runAsync(
-      'INSERT INTO expense_participants (expense_id, member_id) VALUES (?, ?)',
-      [id, memberId],
+      'INSERT INTO expense_participants (expense_id, member_id, share) VALUES (?, ?, ?)',
+      [id, memberId, customShares?.[memberId] ?? null],
     );
   }
 }
@@ -355,6 +373,7 @@ export async function updateExpense(
   amount: number,
   participants: string[],
   paidBy?: string,
+  customShares?: Record<string, number>,
 ): Promise<void> {
   const database = await getDatabase();
   await database.runAsync(
@@ -364,8 +383,8 @@ export async function updateExpense(
   await database.runAsync('DELETE FROM expense_participants WHERE expense_id = ?', [id]);
   for (const memberId of participants) {
     await database.runAsync(
-      'INSERT INTO expense_participants (expense_id, member_id) VALUES (?, ?)',
-      [id, memberId],
+      'INSERT INTO expense_participants (expense_id, member_id, share) VALUES (?, ?, ?)',
+      [id, memberId, customShares?.[memberId] ?? null],
     );
   }
 }
