@@ -1,22 +1,15 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
-  Platform, Modal, FlatList,
+  View, StyleSheet, TextInput, ScrollView, Pressable, FlatList, Keyboard,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTripStore } from '@/hooks/useTripStore';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import CustomHeader from '@/components/CustomHeader';
-import KeyboardAvoidingView from '@/components/KeyboardAvoidingView';
-import UserAvatar from '@/components/UserAvatar';
-import SubmitButton from '@/components/SubmitButton';
+import { AppText, BottomSheet, Button, NumPad } from '@/components/ui';
 import { useDialog } from '@/components/DialogProvider';
 import { useTranslation } from 'react-i18next';
-import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
-import { formatCurrency } from '@/utils/calculator';
-import { parseAmountInput } from '@/utils/currency';
+import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
+import { DEFAULT_CURRENCY, formatCurrency, parseAmountInput } from '@/utils/currency';
 import { Member } from '@/utils/types';
 
 export default function AddPaymentScreen() {
@@ -26,8 +19,7 @@ export default function AddPaymentScreen() {
     paymentId?: string;
   }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { trips, addPayment, updatePayment } = useTripStore();
+  const { trips, addPayment, updatePayment, removePayment } = useTripStore();
   const { colors } = useAppTheme();
   const { showDialog } = useDialog();
   const { t } = useTranslation();
@@ -40,33 +32,66 @@ export default function AddPaymentScreen() {
     [paymentId, trip],
   );
 
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(
-    existingPayment?.memberId ?? preselectedMemberId ?? null,
+  // Giữ giá trị ban đầu để biết người dùng đã sửa dở hay chưa khi đóng bảng.
+  const [initialMemberId] = useState<string | null>(
+    () => existingPayment?.memberId ?? preselectedMemberId ?? null,
   );
-  const [amountText, setAmountText] = useState(existingPayment?.amount.toString() ?? '');
-  const [note, setNote] = useState(existingPayment?.note ?? '');
+  const [initialAmountText] = useState(() => existingPayment?.amount.toString() ?? '');
+  const [initialNote] = useState(() => existingPayment?.note ?? '');
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(initialMemberId);
+  const [amountText, setAmountText] = useState(initialAmountText);
+  const [note, setNote] = useState(initialNote);
+  const [numPadOpen, setNumPadOpen] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const amount = useMemo(
     () => parseAmountInput(amountText, trip?.currency),
     [amountText, trip?.currency],
   );
 
-  const allMembers = useMemo(() => {
+  // Thủ quỹ giữ quỹ nên không nằm trong danh sách người đóng; chỉ giữ lại khi khoản đang sửa là của họ.
+  const payers = useMemo(() => {
     if (!trip) return [];
-    return trip.members.filter(m => m.id !== trip.treasurerId || m.id === selectedMemberId);
+    return trip.members.filter((m) => m.id !== trip.treasurerId || m.id === selectedMemberId);
   }, [trip, selectedMemberId]);
 
-  const selectedMember = useMemo(
-    () => allMembers.find((m) => m.id === selectedMemberId) ?? null,
-    [allMembers, selectedMemberId],
-  );
-
-  const handleSelectMember = useCallback((member: Member) => {
-    setSelectedMemberId(member.id);
-    setDropdownOpen(false);
+  const handleShowNumPad = useCallback(() => {
+    Keyboard.dismiss();
+    setNumPadOpen(true);
   }, []);
+
+  // Ô ghi chú dùng bàn phím hệ thống, nên thu NumPad lại cho bảng gọn.
+  const handleHideNumPad = useCallback(() => setNumPadOpen(false), []);
+
+  const handleClose = useCallback(() => {
+    if (isSubmitting) return;
+    if (amountText === initialAmountText && note === initialNote && selectedMemberId === initialMemberId) {
+      router.back();
+      return;
+    }
+    showDialog(t('common.discard_title'), t('common.discard_desc'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.discard'), style: 'destructive', onPress: () => router.back() },
+    ]);
+  }, [
+    isSubmitting, amountText, initialAmountText, note, initialNote, selectedMemberId, initialMemberId,
+    router, showDialog, t,
+  ]);
+
+  const handleDelete = useCallback(() => {
+    if (!paymentId) return;
+    showDialog(t('trip_detail.alert_delete_payment_title'), t('trip_detail.alert_delete_payment_desc'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          await removePayment(id!, paymentId);
+          router.back();
+        },
+      },
+    ]);
+  }, [paymentId, id, removePayment, router, showDialog, t]);
 
   const handleSubmit = useCallback(async () => {
     if (!selectedMemberId) { showDialog(t('common.error'), t('add_payment.err_no_member')); return; }
@@ -85,194 +110,115 @@ export default function AddPaymentScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedMemberId, amount, note, id, paymentId, updatePayment, addPayment, router]);
+  }, [selectedMemberId, amount, note, id, paymentId, updatePayment, addPayment, router, showDialog, t]);
+
+  const renderPayerChip = useCallback(({ item }: { item: Member }) => {
+    const selected = item.id === selectedMemberId;
+    return (
+      <Pressable
+        style={[styles.chip, selected && styles.chipSelected]}
+        onPress={() => setSelectedMemberId(item.id)}
+        accessibilityRole="radio"
+        accessibilityState={{ selected }}
+      >
+        <AppText variant="label" weight="semibold" color={selected ? colors.onPrimary : colors.textSecondary}>
+          {item.name}
+        </AppText>
+      </Pressable>
+    );
+  }, [selectedMemberId, styles, colors]);
 
   if (!trip) return null;
+  const currency = trip.currency ?? DEFAULT_CURRENCY;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <CustomHeader title={paymentId ? t('add_payment.update_title') : t('add_payment.title')} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
-      >
-        <ScrollView style={styles.flex} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-
-          {/* Dropdown */}
-          <View style={styles.section}>
-            <Text style={styles.label}>{t('add_payment.member_label')}</Text>
-            <TouchableOpacity
-              style={styles.dropdownTrigger}
-              onPress={() => setDropdownOpen(true)}
-              activeOpacity={0.8}
-            >
-              {selectedMember ? (
-                <View style={styles.dropdownSelected}>
-                  <UserAvatar 
-                    name={selectedMember.name} 
-                    isTreasurer={selectedMember.id === trip.treasurerId} 
-                    size={34} 
-                  />
-                  <View style={styles.dropdownSelectedText}>
-                    <Text style={styles.dropdownValueText}>{selectedMember.name}</Text>
-                    {selectedMember.id === trip.treasurerId && (
-                      <Text style={styles.dropdownBadge}>{t('create_trip.treasurer')}</Text>
-                    )}
-                  </View>
-                </View>
-              ) : (
-                <Text style={styles.dropdownPlaceholder}>{t('add_payment.member_label')}...</Text>
-              )}
-              <Ionicons
-                name={dropdownOpen ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color={colors.textMuted}
-              />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>{t('add_payment.amount_label')}</Text>
-            <TextInput
-              style={[styles.input, styles.amountInput]}
-              value={amountText}
-              onChangeText={setAmountText}
-              placeholder="0"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>{t('add_payment.note_label')}</Text>
-            <TextInput
-              style={styles.input}
-              value={note}
-              onChangeText={setNote}
-              placeholder={t('add_payment.note_placeholder')}
-              placeholderTextColor={colors.textMuted}
-            />
-          </View>
-        </ScrollView>
-
-        <SubmitButton
-          title={
-            isSubmitting ? t('add_payment.submitting')
-              : paymentId ? t('add_payment.update_btn')
-              : amount > 0 ? t('add_payment.submit', { amount: formatCurrency(amount, trip?.currency) })
-                : t('add_payment.btn_receive')
-          }
-          icon="checkmark-circle"
-          onPress={handleSubmit}
-          disabled={isSubmitting || !selectedMemberId || amount <= 0}
-          color="success"
-        />
-      </KeyboardAvoidingView>
-
-      {/* Dropdown Modal — bottom sheet style */}
-      <Modal
-        visible={dropdownOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setDropdownOpen(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setDropdownOpen(false)}
+    <BottomSheet visible onRequestClose={handleClose} scrollable={false}>
+      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <Pressable
+          style={styles.amount}
+          onPress={handleShowNumPad}
+          accessibilityRole="button"
+          accessibilityLabel={t('add_payment.amount_label')}
         >
-          <View style={[styles.modalSheet, { paddingBottom: insets.bottom + Spacing.md }]}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>{t('add_payment.select_member')}</Text>
-            <FlatList
-              data={allMembers}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => {
-                const isSelected = item.id === selectedMemberId;
-                const isTreasurer = item.id === trip.treasurerId;
-                return (
-                  <TouchableOpacity
-                    style={[styles.modalItem, isSelected && styles.modalItemSelected]}
-                    onPress={() => handleSelectMember(item)}
-                    activeOpacity={0.7}
-                  >
-                    <UserAvatar 
-                      name={item.name} 
-                      isTreasurer={isTreasurer} 
-                      size={34} 
-                    />
-                    <View style={styles.modalItemText}>
-                      <Text style={[styles.modalItemName, isSelected && styles.modalItemNameSelected]}>
-                        {item.name}
-                      </Text>
-                      {isTreasurer && <Text style={styles.dropdownBadge}>{t('create_trip.treasurer')}</Text>}
-                    </View>
-                    {isSelected && (
-                      <Ionicons name="checkmark-circle" size={22} color={colors.success} />
-                    )}
-                  </TouchableOpacity>
-                );
-              }}
+          <AppText
+            variant="hero"
+            weight="bold"
+            numeric
+            color={amount > 0 ? colors.text : colors.textMuted}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {formatCurrency(amount, currency)}
+          </AppText>
+        </Pressable>
+
+        <AppText variant="label" weight="semibold" color={colors.textSecondary} style={styles.sectionLabel}>
+          {t('add_payment.member_label')}
+        </AppText>
+        <FlatList
+          horizontal
+          data={payers}
+          keyExtractor={(item) => item.id}
+          renderItem={renderPayerChip}
+          extraData={selectedMemberId}
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.chips}
+        />
+
+        <TextInput
+          style={styles.noteInput}
+          value={note}
+          onChangeText={setNote}
+          onFocus={handleHideNumPad}
+          placeholder={t('add_payment.note_placeholder')}
+          placeholderTextColor={colors.textMuted}
+          accessibilityLabel={t('add_payment.note_label')}
+          returnKeyType="done"
+        />
+      </ScrollView>
+
+      <View style={styles.footer}>
+        {numPadOpen && <NumPad value={amountText} currency={currency} onChange={setAmountText} />}
+        <View style={styles.actions}>
+          {paymentId && (
+            <View style={styles.action}>
+              <Button title={t('common.delete')} variant="danger" icon="trash-outline" onPress={handleDelete} />
+            </View>
+          )}
+          <View style={styles.action}>
+            <Button
+              title={t('common.save')}
+              icon="checkmark"
+              onPress={handleSubmit}
+              loading={isSubmitting}
+              disabled={amount <= 0 || !selectedMemberId}
             />
           </View>
-        </TouchableOpacity>
-      </Modal>
-    </SafeAreaView>
+        </View>
+      </View>
+    </BottomSheet>
   );
 }
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    flex: { flex: 1 },
-    content: { padding: Spacing.lg },
-    section: { marginBottom: Spacing.xxl },
-    label: {
-      fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: colors.textSecondary,
-      textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.sm,
+    scroll: { flexShrink: 1 },
+    amount: { alignItems: 'center', paddingBottom: Spacing.lg },
+    sectionLabel: { marginBottom: Spacing.sm },
+    chips: { gap: Spacing.sm },
+    chip: {
+      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
+      borderRadius: BorderRadius.full, borderWidth: 1, borderColor: colors.border,
     },
-    input: {
-      backgroundColor: colors.surface, borderRadius: BorderRadius.md,
-      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-      fontSize: FontSize.md, color: colors.text, borderWidth: 1, borderColor: colors.border,
+    chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+    noteInput: {
+      backgroundColor: colors.background, borderRadius: BorderRadius.md,
+      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, marginTop: Spacing.lg,
+      fontSize: FontSize.md, fontFamily: FontFamily.regular, color: colors.text,
+      borderWidth: 1, borderColor: colors.border,
     },
-    amountInput: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, textAlign: 'center' },
-    // Dropdown trigger
-    dropdownTrigger: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      backgroundColor: colors.surface, borderRadius: BorderRadius.md,
-      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-      borderWidth: 1, borderColor: colors.border, minHeight: 54,
-    },
-    dropdownSelected: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flex: 1 },
-    dropdownSelectedText: { flex: 1 },
-    dropdownValueText: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: colors.text },
-    dropdownPlaceholder: { fontSize: FontSize.md, color: colors.textMuted, flex: 1 },
-    dropdownBadge: { fontSize: FontSize.xs, color: colors.accentLight, fontWeight: FontWeight.bold, marginTop: 2 },
-    // Bottom sheet modal
-    modalOverlay: {
-      flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
-    },
-    modalSheet: {
-      backgroundColor: colors.background,
-      borderTopLeftRadius: 20, borderTopRightRadius: 20,
-      paddingTop: Spacing.md, maxHeight: '70%',
-    },
-    modalHandle: {
-      width: 40, height: 4, borderRadius: 2,
-      backgroundColor: colors.border, alignSelf: 'center', marginBottom: Spacing.md,
-    },
-    modalTitle: {
-      fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: colors.text,
-      paddingHorizontal: Spacing.lg, marginBottom: Spacing.sm,
-    },
-    modalItem: {
-      flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-      borderBottomWidth: 1, borderBottomColor: colors.border,
-    },
-    modalItemSelected: { backgroundColor: colors.surfaceElevated },
-    modalItemText: { flex: 1 },
-    modalItemName: { fontSize: FontSize.md, color: colors.text, fontWeight: FontWeight.medium },
-    modalItemNameSelected: { fontWeight: FontWeight.bold, color: colors.primary },
+    footer: { gap: Spacing.lg, paddingTop: Spacing.lg },
+    actions: { flexDirection: 'row', gap: Spacing.md },
+    action: { flex: 1 },
   });

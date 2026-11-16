@@ -21,20 +21,13 @@
 	"add_payment": {
 		"amount_label": "Số tiền",
 		"amount_placeholder": "0",
-		"btn_receive": "Nhận tiền đóng",
 		"err_fail": "Không thể thêm khoản đóng",
 		"err_invalid_amount": "Số tiền phải lớn hơn 0",
 		"err_no_member": "Vui lòng chọn người đóng",
 		"member_label": "Người đóng",
 		"note_label": "Ghi chú (không bắt buộc)",
 		"note_placeholder": "Ví dụ: Đóng trước 500k",
-		"select_member": "Chọn người đóng",
-		"submit": "Nhận {{amount}}",
-		"submit_empty": "Nhận tiền",
-		"submitting": "Đang thêm...",
-		"title": "Nhận tiền đóng",
-		"update_btn": "Cập nhật",
-		"update_title": "Sửa tiền đóng"
+		"submit_empty": "Nhận tiền"
 	},
 	"common": {
 		"about": "Thông tin ứng dụng",
@@ -47,8 +40,8 @@
 		"settings": "Cài đặt",
 		"warning": "Cảnh báo",
 		"discard": "Bỏ",
-		"discard_title": "Bỏ khoản đang nhập?",
-		"discard_desc": "Số tiền vừa nhập sẽ không được lưu."
+		"discard_title": "Bỏ thay đổi?",
+		"discard_desc": "Những gì bạn vừa nhập sẽ không được lưu."
 	},
 	"components": {
 		"backspace": "Xoá chữ số",

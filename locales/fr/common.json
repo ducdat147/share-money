@@ -21,20 +21,13 @@
 	"add_payment": {
 		"amount_label": "Montant",
 		"amount_placeholder": "0",
-		"btn_receive": "Recevoir la cotisation",
 		"err_fail": "Impossible d'ajouter la cotisation",
 		"err_invalid_amount": "Le montant doit être supérieur à 0",
 		"err_no_member": "Veuillez sélectionner le contributeur",
 		"member_label": "Contributeur",
 		"note_label": "Note (facultatif)",
 		"note_placeholder": "Ex. : Payé d'avance",
-		"select_member": "Sélectionner un membre",
-		"submit": "Recevoir {{amount}}",
-		"submit_empty": "Recevoir la cotisation",
-		"submitting": "Ajout en cours...",
-		"title": "Recevoir une cotisation",
-		"update_btn": "Mettre à jour",
-		"update_title": "Modifier la cotisation"
+		"submit_empty": "Recevoir la cotisation"
 	},
 	"common": {
 		"about": "À propos",
@@ -47,8 +40,8 @@
 		"settings": "Paramètres",
 		"warning": "Attention",
 		"discard": "Abandonner",
-		"discard_title": "Abandonner cette dépense ?",
-		"discard_desc": "Le montant saisi ne sera pas enregistré."
+		"discard_title": "Abandonner les modifications ?",
+		"discard_desc": "Ce que vous avez saisi ne sera pas enregistré."
 	},
 	"components": {
 		"backspace": "Effacer le chiffre",
