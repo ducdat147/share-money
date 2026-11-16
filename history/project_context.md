@@ -82,6 +82,28 @@ Khoản chi trả từ quỹ, paid_by NULL           -> sum(balances) = -120.000
 
 ---
 
+## 📅 Cập Nhật (16-11-2026) — Làm lại giao diện: bộ G, bảng trượt nhập nhanh, tổng kết "ai trả ai"
+
+Chủ app thấy giao diện cũ chưa thân thiện. Mục tiêu số một là nhập nhanh: ngồi quán ghi một khoản chi xong trong vài giây. Mọi chức năng và cách tính tiền giữ nguyên, [calculator.ts](../utils/calculator.ts) và schema SQLite không đổi. Spec ở `docs/superpowers/specs/2026-11-16-ui-ux-redesign-design.md`. Nhánh `feat/ui-redesign`.
+
+* Phong cách G, "Ô liu & cát". Primary `#4D7C0F` (sáng) và `#A3E635` (tối), nền cát `#F5F3EC` và `#14140F`. Giữ nguyên tên token trong [theme.ts](../constants/theme.ts), chỉ đổi giá trị. Bo góc mặc định 12, thẻ có viền 1px, không đổ bóng. `success` (được nhận) và `danger` (phải trả) đạt tương phản 4.5:1 trên `surface` ở cả hai chế độ.
+* Font Lexend nạp bằng `useFonts` trong `app/_layout.tsx`, splash giữ tới khi xong. Android không chọn được file font bằng `fontWeight`, nên có token `FontFamily` và `AppText` chọn file theo `weight`. Đừng đặt `fontWeight` lên `AppText`. Số tiền luôn có `numeric` để cột thẳng hàng.
+* Bộ dùng chung nằm ở `components/ui/`: `AppText`, `Button`, `Card`, `SegmentedControl`, `Stepper`, `FAB`, `ActionMenu`, `ListRow`, `BottomSheet`, `NumPad`. `BottomSheet` tự dựng bằng `Animated` và RNGH `usePanGesture`, kéo ở thanh tay nắm. Không dùng `@gorhom/bottom-sheet` vì nó kéo theo reanimated.
+* Nhập chi tiêu và đóng quỹ giờ là bảng trượt từ đáy. Hai route `add-expense`, `add-payment` đổi từ `modal` sang `transparentModal` để màn chuyến đi vẫn hiện phía sau. Mở ra là thấy số tiền lớn và `NumPad` (VND có phím `000`, USD có dấu thập phân). `NumPad` không tự vẽ số; màn hình vẽ bằng `formatCurrency(parseAmountInput(...))`.
+* Hai thay đổi có chủ đích ở bảng chi tiêu. Mô tả để trống thì lưu "Chi tiêu HH:mm", trước đây bắt buộc. Người trả mặc định là người trả khoản chi mới nhất, rồi tới thủ quỹ, rồi người đầu tiên; trước đây luôn là thủ quỹ. Logic nằm ở [defaults.ts](../utils/defaults.ts), có test.
+* Phần "Chia cho" thu gọn thành "Cả nhóm (N)". Mở ra thì `NumPad` thu lại, `MemberSelector` và ô số tiền riêng (`customShares`) dùng nguyên như cũ.
+* Thùng rác trên từng dòng bị bỏ. Xoá chi tiêu và đóng quỹ nằm ở đáy bảng sửa, xoá thành viên nằm trong `MemberDetailModal`. Hộp thoại xác nhận và điều kiện chặn xoá (thủ quỹ...) giữ như cũ. `ListRow` cố ý không có nút xoá.
+* Trang chủ xếp chuyến đang đi lên trước, chuyến đã xong xuống dưới và làm mờ. `getTripSummaries` đổi thành `ORDER BY t.is_completed ASC, t.created_at DESC, t.id DESC`. Con trỏ phân trang phải thêm `is_completed`, nếu không cuộn qua ranh giới đang đi / đã xong sẽ trùng hoặc sót chuyến. Phần dựng `WHERE` của con trỏ tách ra [summaryCursor.ts](../services/summaryCursor.ts), có test; kiểu con trỏ trong `loadMoreSummaries` của store cũng đổi theo. Ba chỗ này phải đổi cùng lúc.
+* Tạo chuyến dùng `Stepper` chọn số người (mặc định 2, tối thiểu 2) và một ô tên cho từng người. Ô để trống thành "Người N" (i18n), thay "User N" cứng trước đây. Tiền tệ chọn bằng `SegmentedControl`.
+* Tổng kết đảo thứ tự: "Cần chuyển N lần" lên đầu, rồi dòng chọn cách chia (mở bảng trượt), rồi "Từng người", rồi dòng quỹ của thủ quỹ. Nút "Chia sẻ kết quả" cố định ở đáy; ảnh chụp có thêm tên chuyến và cách chia. `SummaryTable` dạng lưới bị xoá, thông tin của nó nằm ở danh sách từng người và bảng chi tiết.
+* Logo mới là đồng xu chia đôi: nền ô liu, nửa trái màu cát, nửa phải màu chanh lệch xuống khoảng 6%. SVG gốc ở `assets/images/logo.svg`. Icon, adaptive icon, splash và favicon đổi theo. Logo chỉ hiện sau khi build lại bản native (CNG), Expo Go không thấy.
+* Đã xoá `SubmitButton` và `SummaryTable`, không ai dùng nữa. `CustomHeader`, `RenameTripDialog`, `KeyboardAvoidingView` vẫn còn importer nên giữ lại.
+* Thêm key `common.submitting` vào ba locale; `MemberDetailModal` từng hiện nguyên chữ key khi đang lưu.
+* Dead code có từ trước, chưa xoá: key `components.badge_active`, `add_payment.amount_placeholder`, `add_payment.submit_empty` và hơn hai mươi key khác không còn chỗ dùng, cùng các file `react-logo*.png`, `partial-react-logo.png` trong `assets/images`. Kiểm tra bằng cách so với commit gốc `5351b42`: không key nào trở thành mồ côi do đợt làm lại này.
+* Chưa chạy trên Expo Go. Còn phải thử tay cả sáng lẫn tối theo mục "Kiểm tra" của spec, và mở một chuyến tạo trước đợt này để so số liệu.
+
+---
+
 ## 📅 Cập Nhật (16-11-2026) — Tuỳ chỉnh số tiền từng người trong chi tiêu
 
 Chia đều làm thiệt người tiêu ít. Ví dụ bữa sáng 4 người: hủ tiếu 30k, phở 40k, hai tô bún riêu 35k. Nay mỗi dòng người tham gia ở form thêm/sửa chi tiêu có ô số tiền. Gõ số thì dòng đó khoá, hiện ổ khoá. Ô trống hiện phần chia đều làm placeholder; người không khoá chia đều phần còn lại. Xoá trống ô là mở khoá.
