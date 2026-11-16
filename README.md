@@ -1,182 +1,168 @@
-# Share Money 💸 - Trip Expense Splitter & Group Expense Manager
+# Share Money
 
-A mobile application built with **React Native** & **Expo SDK 54**, designed to help groups of friends easily record expenses, contribute to a shared fund, and automatically calculate the most simplified settlements (who owes whom how much) in a transparent and quick manner.
+Split trip expenses among a group and see exactly who owes whom.
 
----
+Share Money is an offline-first mobile app built with Expo and React Native. Record what the group spent, track cash handed to a treasurer, and get a settlement plan with as few transfers as possible. All data stays in SQLite on the device. There is no backend and no account.
 
-## 🚀 Features
+## Features
 
-- **Trip Management**: Create trips quickly by entering the number of members. Names like "User 1", "User 2" are generated automatically.
-- **Member Customization**: Update member names, assign a **Treasurer**, and add quick fund contributions through a dedicated **Member Detail Modal**.
-- **Trip-specific Currency**: Configure currency (`VND` or `USD`) per trip with interactive switching in the trip header.
-- **Advanced Settlement Strategies**:
-  - **Optimal (Default)**: Minimizes the number of transactions using a Greedy + Subset Sum solver.
-  - **Centralized**: Routes all debts through a designated **Middleman** (usually the Treasurer) for organized collection and redistribution.
-- **Shareable Results**: Export the settlement transaction list as a high-quality **JPEG image** to share via Zalo, Messenger, or other apps.
-- **Symmetric Rounding System**:
-  - Uses high-precision math during intermediate calculations to avoid division anomalies.
-  - Implements symmetric rounding half away from zero to ensure correct presentation for both debts and refunds.
-- **Detailed Breakdowns**: The summary screen provides a per-member list of "Directly Paid" (advanced) expenses for full transparency.
-- **Dynamic Avatar System**: Generates unique initials-based avatars with deterministic colors based on member names.
-- **Semantic UI & Dark Mode**: Modern color palette following WCAG contrast guidelines with automatic light/dark mode switching.
-- **Offline First**: Stores data securely on your local device using SQLite.
+- **Trips and members.** Create a trip by member count; placeholder names are filled in and can be renamed later. Mark a trip as completed to lock it.
+- **Per-trip currency.** Each trip uses `VND` (0 decimals) or `USD` (2 decimals).
+- **Flexible splits.** Split an expense equally among selected participants, or lock custom amounts for some people and split the rest equally.
+- **Treasurer and shared fund.** Members can pay into a fund held by a treasurer. Expenses can be paid from the fund or out of a member's own pocket.
+- **Two settlement strategies.**
+  - *Optimal*: minimizes the number of transfers (zero-sum subset search for up to 15 members, then a greedy pass).
+  - *Centralized*: every debtor pays a middleman, by default the treasurer, who then pays every creditor.
+- **Shareable summary.** Export the settlement list as an image and send it through any messaging app.
+- **Quick entry.** Expenses and fund payments are entered in bottom sheets with a built-in number pad.
+- **Themes and languages.** Light, dark or system theme. English, French and Vietnamese, detected from the device.
 
----
+## Tech stack
 
-## 🛠️ Technology Stack
+| Area | Library |
+| --- | --- |
+| Framework | Expo SDK 58, React Native 0.88 (New Architecture), React 19 |
+| Routing | Expo Router (file-based, typed routes) |
+| Storage | `expo-sqlite` |
+| State | Zustand |
+| i18n | `i18next`, `react-i18next`, `expo-localization` |
+| Gestures and animation | `react-native-gesture-handler` 3, React Native `Animated` |
+| Sharing | `react-native-view-shot`, `expo-sharing` |
+| Font | Lexend (`@expo-google-fonts/lexend`) |
 
-- **Core**: React Native 0.81+, Expo SDK 54 (Expo Router v4). **New Architecture** is supported.
-- **Database**: `expo-sqlite` (Offline First).
-- **State Management**: `Zustand`.
-- **Localization**: `i18next` & `react-i18next`.
-- **Animations**: Standard React Native **Animated API** (optimized for stability and 60fps).
-- **Utilities**: `react-native-view-shot` for image capture, `expo-sharing` for native sharing.
-- **Icons**: `@expo/vector-icons` (Ionicons).
+## Getting started
 
----
+### Prerequisites
 
-## 📦 Getting Started & Local Development
+- **Node.js** 22.13+, 24.3+ or 26+. Odd releases such as Node 25 are not supported by Expo SDK 58.
+- **pnpm 11**, pinned in `package.json`. Enable it with Corepack:
 
-### 📋 Prerequisites
+  ```bash
+  corepack enable
+  ```
 
-- **Node.js** (v18 or newer recommended).
-- **pnpm** (preferred) or npm.
-- **Expo Go** app installed on your physical device, or a set-up emulator.
+- Expo Go on a device, or an Android emulator / iOS simulator.
 
-### ⚙️ Installation & Running
-
-1. **Clone the repository:**
+### Install and run
 
 ```bash
 git clone git@github.com:ducdat147/share-money.git
-cd share_money
-```
-
-2. **Install dependencies:**
-
-```bash
+cd share-money
 pnpm install
-```
-
-3. **Start the Metro Bundler:**
-
-```bash
 npx expo start -c
 ```
 
----
+Scan the QR code with Expo Go, or press `a` / `i` to open an emulator.
 
-## 🛠️ Android & iOS Build Guide
+### Scripts
 
-The project is pre-configured with **Expo Application Services (EAS)** configuration in `eas.json` for cloud builds. You can also build binaries locally.
+```bash
+pnpm lint                                    # ESLint (eslint-config-expo)
+npx tsc --noEmit                             # type check, strict mode
+pnpm test                                    # Jest in watch mode
+npx jest utils/__tests__/calculator.test.ts  # one suite, no watch
+```
 
-### Prerequisites for EAS Build
+### Upgrading dependencies
 
-1. Install EAS CLI globally:
+Use `npx expo install <pkg>` or `npx expo install --fix` for Expo-managed packages. Do not run `pnpm update`: it widens version ranges to `^` and can pull native modules past the versions Expo Go ships, which crashes the app on launch.
+
+A new dependency that runs a build script must be approved under `allowBuilds` in `pnpm-workspace.yaml`. Otherwise `pnpm install` fails.
+
+## Building
+
+`android/` and `ios/` are generated by `expo prebuild` and are not committed.
+
+### EAS (cloud)
 
 ```bash
 npm install -g eas-cli
-```
-
-2. Log in to your Expo account:
-
-```bash
 eas login
 ```
 
-3. Initialize project:
+| Profile | Command | Output |
+| --- | --- | --- |
+| `preview` | `eas build -p android --profile preview` | Android APK |
+| `production` | `eas build -p android --profile production` | Android AAB |
+| `preview-simulator` | `eas build -p ios --profile preview-simulator` | iOS simulator build |
+| `preview` | `eas build -p ios --profile preview` | iOS ad-hoc build |
+| `production` | `eas build -p ios --profile production` | iOS store build |
+
+### Local
 
 ```bash
-eas project:init
+npx expo prebuild --platform android
+npx expo run:android
+
+npx expo prebuild --platform ios
+npx expo run:ios
 ```
 
-(if not configured)
+The `Makefile` wraps a local release APK build:
 
-### 🤖 Android Builds
+```bash
+make build-apk     # output: android/app/build/outputs/apk/release/app-release.apk
+make install-apk   # install on a connected device with adb
+```
 
-- **Cloud Build (Recommended):**
-  - APK for testing:
+Local Android builds need JDK 17.
 
-  ```bash
-  eas build -p android --profile preview
-  ```
-
-  - AAB for Store:
-
-  ```bash
-  eas build -p android --profile production
-  ```
-
-- **Local Build:**
-
-  ```bash
-  npx expo prebuild --platform android
-  ```
-
-  ```bash
-  npx expo run:android
-  ```
-
-### 🍎 iOS Builds
-
-- **Cloud Build (Recommended):**
-  - Simulator build:
-
-  ```bash
-  eas build -p ios --profile preview-simulator
-  ```
-
-  - Ad-Hoc build:
-
-  ```bash
-  eas build -p ios --profile preview
-  ```
-
-  - IPA for Store:
-
-  ```bash
-  eas build -p ios --profile production
-  ```
-
-- **Local Build:**
-
-  ```bash
-  npx expo prebuild --platform ios
-  ```
-
-  ```bash
-  npx expo run:ios
-  ```
-
----
-
-## 📁 Project Structure
+## Project structure
 
 ```text
-share_money/
-├── app/                  # Application screens & routing (Expo Router)
-│   ├── _layout.tsx       # Root layout & providers
-│   ├── index.tsx         # Home screen (Trip List)
-│   └── trip/             # Trip workflow
-│       ├── create.tsx    # Fast trip creation (Member count based)
-│       └── [id]/         # Trip details & Summary
-├── components/           # Reusable UI (Modals, Avatars, Cards)
-├── constants/            # Design System (theme.ts)
-├── hooks/                # Zustand stores & Theme hooks
-├── locales/              # Translation files (vi.json, en.json)
-└── utils/                # Calculator logic & Currency helpers
+share-money/
+├── app/                     # Screens (Expo Router)
+│   ├── _layout.tsx          # Root layout, providers, route options
+│   ├── index.tsx            # Trip list
+│   ├── settings.tsx         # Theme and language
+│   └── trip/
+│       ├── create.tsx       # New trip (modal)
+│       └── [id]/
+│           ├── index.tsx        # Trip detail
+│           ├── add-expense.tsx  # Expense sheet
+│           ├── add-payment.tsx  # Fund payment sheet
+│           └── summary.tsx      # Balances and settlements
+├── components/              # Screen-level components
+│   └── ui/                  # Shared UI kit (AppText, Button, BottomSheet, NumPad, ...)
+├── constants/theme.ts       # Colors, spacing, typography tokens
+├── hooks/                   # Zustand stores (trips, theme) and theme hook
+├── services/database.ts     # The only module that talks to SQLite
+├── utils/
+│   ├── calculator.ts        # Shares, balances, settlements
+│   └── currency.ts          # Formatting and rounding
+└── locales/{en,fr,vi}/      # Translations
 ```
 
----
+## How it works
 
-## 🔒 Code Standards & High Performance
+### Data flow
 
-- **Design Consistency**: Utilizes **Semantic Colors** from [theme.ts](./constants/theme.ts).
-- **Symmetric Currency Accuracy**: Keeps calculation float errors in check using `roundCurrency` with symmetric zero-point rounding.
-- **Targeting 60fps**: Prioritizes Functional Components with memoization (`React.memo`, `useMemo`, `useCallback`) to reduce rendering overhead.
+`services/database.ts` reads full trips (members, expenses and payments) and maps SQL `snake_case` columns to `camelCase` types. The Zustand store in `hooks/useTripStore.ts` writes to the database, then reloads the affected trip. Screens read from the store and never touch SQLite directly.
 
----
+The schema is migrated in place on launch. A new column goes into the `CREATE TABLE` statement and also into its own guarded `ALTER TABLE`, so existing installs keep their data.
 
-## 📝 License
+### Money model
 
-This project is open-source and distributed under the **MIT License**.
+All money logic lives in `utils/calculator.ts`:
+
+1. **Share.** What each participant owes for an expense. Locked custom shares are taken first; the remainder is split equally.
+2. **Fund payment.** Cash a member hands to the treasurer.
+3. **Advanced payment.** A non-treasurer member pays a vendor directly.
+
+For each member, `balance = totalPaid - totalShare - fundHeld`. A positive balance means the member is owed money; a negative one means they owe. Balances sum to zero, and the settlement strategies turn them into transfers.
+
+Intermediate math stays unrounded. Values are rounded only when stored on a summary or settlement, with symmetric half-away-from-zero rounding, so a debt and its matching refund always show the same amount.
+
+## Contributing
+
+- Run `pnpm lint`, `npx tsc --noEmit` and the Jest suites before opening a PR.
+- User-facing text goes through `t()`. Keep `locales/en`, `locales/fr` and `locales/vi` in sync.
+- Use theme tokens from `constants/theme.ts` instead of hard-coded colors or spacing.
+- Show dialogs with `useDialog()`, not React Native `Alert`.
+- Do not add `react-native-reanimated`; animations use the built-in `Animated` API.
+
+`CLAUDE.md` has the full set of conventions.
+
+## License
+
+[MIT](LICENSE) © 2026 DatTD
