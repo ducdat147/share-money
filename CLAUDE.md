@@ -24,7 +24,7 @@ npx jest path/to/file.test.ts -t "case name"   # single test / single case
 npx tsc --noEmit           # typecheck (strict mode is on)
 ```
 
-There are currently **no test files**; `scratch/test.ts` is an ad-hoc script, not a Jest test.
+The only Jest suite is [utils/__tests__/calculator.test.ts](utils/__tests__/calculator.test.ts); run it without watch mode via `npx jest utils/__tests__/calculator.test.ts`. Test files import `expect`/`test` from `@jest/globals` because `tsc` does not pick up the `@types/jest` globals under `expo/tsconfig.base`. `scratch/test.ts` is an ad-hoc script, not a Jest test.
 
 Builds (`android/` and `ios/` are gitignored — Continuous Native Generation):
 
@@ -54,7 +54,7 @@ Screens read `trips` from the store and derive their trip with `useMemo(() => tr
 
 Three distinct money flows, and mixing them up is the main source of bugs:
 
-- **Share** — an expense is split equally across `expense.participants`; each participant owes `amount / participants.length`.
+- **Share** — what each of `expense.participants` owes. `expense.customShares` (stored as the nullable `expense_participants.share` column) holds the locked amounts; everyone else splits `amount - sum(locked)` equally. `getExpenseShares` is the single place that computes this — never divide `amount / participants.length` directly. `getCustomSharesError` is the form's validation for locked shares.
 - **Fund payment** — a `Payment` row: cash handed to the treasurer up front.
 - **Advanced payment** — `expense.paidBy` is a non-treasurer member: that member paid a vendor directly out of pocket.
 

@@ -19,7 +19,8 @@
 		"update_title": "Sửa chi tiêu",
 		"err_shares_exceed": "Tổng số tiền đã khoá vượt quá tổng chi tiêu",
 		"err_shares_mismatch": "Tổng số tiền từng người phải bằng tổng chi tiêu",
-		"custom_split": "Chia tuỳ chỉnh"
+		"custom_split": "Chia tuỳ chỉnh",
+		"err_shares_no_remainder": "Các phần đã khoá dùng hết tổng tiền, hãy bỏ chọn những người không phải trả"
 	},
 	"add_payment": {
 		"amount_label": "Số tiền",

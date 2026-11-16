@@ -82,6 +82,14 @@ export default function AddExpenseScreen() {
     [customShares],
   );
 
+  const sharesErrorMessage = useMemo(() => {
+    if (hasNegativeShare) return t('add_payment.err_invalid_amount');
+    if (sharesError === 'exceeds_total') return t('add_expense.err_shares_exceed');
+    if (sharesError === 'mismatch_total') return t('add_expense.err_shares_mismatch');
+    if (sharesError === 'no_remainder') return t('add_expense.err_shares_no_remainder');
+    return undefined;
+  }, [hasNegativeShare, sharesError, t]);
+
   const payerMember = useMemo(
     () => trip?.members.find((m) => m.id === paidBy) ?? null,
     [trip, paidBy]
@@ -151,11 +159,7 @@ export default function AddExpenseScreen() {
     if (amount <= 0) { showDialog(t('common.error'), t('add_payment.err_invalid_amount')); return; }
     if (!payerMember) { showDialog(t('common.error'), t('add_expense.err_no_payer')); return; }
     if (selectedMembers.length === 0) { showDialog(t('common.error'), t('add_expense.err_no_participants')); return; }
-    if (hasNegativeShare) { showDialog(t('common.error'), t('add_payment.err_invalid_amount')); return; }
-    if (sharesError) {
-      showDialog(t('common.error'), t(sharesError === 'exceeds_total' ? 'add_expense.err_shares_exceed' : 'add_expense.err_shares_mismatch'));
-      return;
-    }
+    if (sharesErrorMessage) { showDialog(t('common.error'), sharesErrorMessage); return; }
     const lockedShares = Object.keys(customShares).length > 0 ? customShares : undefined;
 
     setIsSubmitting(true);
@@ -171,7 +175,7 @@ export default function AddExpenseScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [description, amount, payerMember, selectedMembers, hasNegativeShare, sharesError, customShares, paidBy, id, expenseId, updateExpense, addExpense, router]);
+  }, [description, amount, payerMember, selectedMembers, sharesErrorMessage, customShares, paidBy, id, expenseId, updateExpense, addExpense, router]);
 
   if (!trip) return null;
 
@@ -256,9 +260,7 @@ export default function AddExpenseScreen() {
               shareTexts={shareTexts}
               onChangeShare={handleChangeShare}
               onShareFocus={handleShareFocus}
-              error={sharesError
-                ? t(sharesError === 'exceeds_total' ? 'add_expense.err_shares_exceed' : 'add_expense.err_shares_mismatch')
-                : hasNegativeShare ? t('add_payment.err_invalid_amount') : undefined}
+              error={sharesErrorMessage}
               currencyCode={trip.currency}
             />
           </View>
@@ -268,7 +270,7 @@ export default function AddExpenseScreen() {
           title={isSubmitting ? t('add_expense.submitting') : (expenseId ? t('add_expense.update_btn') : t('add_expense.submit'))}
           icon="checkmark-circle"
           onPress={handleSubmit}
-          disabled={isSubmitting || !description.trim() || amount <= 0 || !payerMember || selectedMembers.length === 0 || hasNegativeShare || sharesError !== null}
+          disabled={isSubmitting || !description.trim() || amount <= 0 || !payerMember || selectedMembers.length === 0 || sharesErrorMessage !== undefined}
         />
       </KeyboardAvoidingView>
 

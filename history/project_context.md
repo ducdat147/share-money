@@ -88,7 +88,8 @@ Chia đều làm thiệt người tiêu ít. Ví dụ bữa sáng 4 người: h�
 
 * Bảng `expense_participants` có thêm cột `share REAL`, cả trong `CREATE TABLE` lẫn `ALTER TABLE` bọc try/catch. `NULL` là chia đều, nên chi tiêu cũ tính y như trước.
 * `Expense.customShares` chỉ chứa người bị khoá. [calculator.ts](../utils/calculator.ts) có `getExpenseShares`, chỗ duy nhất quy đổi chi tiêu ra phần tiền từng người. `calculateSummary`, `ExpenseItem`, `MemberSelector` đều gọi nó, đừng tự chia `amount / participants.length` nữa.
-* `getCustomSharesError` chặn hai trường hợp: tổng khoá vượt tổng tiền, hoặc khoá hết mà lệch tổng quá `0.01`. Lỗi hiện đỏ ngay dưới danh sách vì nút Lưu đã bị tắt.
+* `getCustomSharesError` chặn ba trường hợp. Tổng khoá vượt tổng tiền. Khoá hết mà lệch tổng quá `0.01`. Khoá chưa hết người nhưng đã dùng hết tiền, khiến người còn lại phải trả 0. Ô tổng tiền còn trống thì chưa báo gì. Lỗi hiện đỏ ngay dưới danh sách vì nút Lưu đã bị tắt.
+* Android không bôi đen chữ khi chạm dù có `selectTextOnFocus`. `ShareInput` trong [MemberSelector.tsx](../components/MemberSelector.tsx) gọi lại `setSelection` sau 50ms.
 * Bỏ chọn rồi chọn lại một người thì người đó về chia đều. Danh sách chi tiêu hiện "Chia tuỳ chỉnh" thay cho "x/người" khi có khoá.
 * Chọn khoá từng người thay vì công tắc "Chia đều / Tuỳ chỉnh": công tắc không xử lý được "chỉnh vài người, còn lại chia đều".
 * ⚠️ Ô nhập nằm cuối form nên trên Android edge-to-edge bàn phím che mất. `add-expense` tự cuộn dòng đang nhập lên, lúc focus và sau `keyboardDidShow` (đợi `KeyboardAvoidingView` co xong). Thêm ô nhập ở cuối form khác thì làm tương tự.

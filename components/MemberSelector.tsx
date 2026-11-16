@@ -1,5 +1,5 @@
-import React, { useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import React, { useCallback, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, type TextInputInstance, type TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Member } from '@/utils/types';
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -77,15 +77,13 @@ const MemberSelector: React.FC<MemberSelectorProps> = React.memo(
                   <View style={styles.shareField}>
                     {isLocked && <Ionicons name="lock-closed" size={14} color={colors.text} />}
                     {/* Ô trống hiện phần chia đều làm placeholder; gõ số là khoá. */}
-                    <TextInput
+                    <ShareInput
                       style={[styles.shareInput, isLocked && styles.shareInputLocked]}
                       value={shareTexts[member.id] ?? ''}
                       onChangeText={(text) => onChangeShare(member.id, text)}
                       onFocus={() => onShareFocus?.(listY.current + (rowYs.current[member.id] ?? 0))}
                       placeholder={share > 0 ? formatCurrency(roundCurrency(share, currencyCode), currencyCode) : ''}
                       placeholderTextColor={colors.primaryLight}
-                      keyboardType="numeric"
-                      selectTextOnFocus
                     />
                   </View>
                 ) : (
@@ -116,6 +114,19 @@ const MemberSelector: React.FC<MemberSelectorProps> = React.memo(
 );
 
 MemberSelector.displayName = 'MemberSelector';
+
+// `selectTextOnFocus` không bôi đen khi chạm trên Android: con trỏ đặt theo điểm chạm sau khi focus
+// và ghi đè vùng chọn. Chọn lại toàn bộ ở frame kế tiếp để gõ số mới là thay luôn số cũ.
+const ShareInput: React.FC<Omit<TextInputProps, 'keyboardType' | 'selectTextOnFocus'>> = (props) => {
+  const inputRef = useRef<TextInputInstance>(null);
+  const { onFocus, value } = props;
+  const handleFocus = useCallback<NonNullable<typeof onFocus>>((e) => {
+    onFocus?.(e);
+    const length = value?.length ?? 0;
+    if (length > 0) setTimeout(() => inputRef.current?.setSelection(0, length), 50);
+  }, [onFocus, value]);
+  return <TextInput {...props} ref={inputRef} onFocus={handleFocus} keyboardType="numeric" selectTextOnFocus />;
+};
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({

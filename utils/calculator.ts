@@ -36,21 +36,24 @@ export function getExpenseShares(
   return shares;
 }
 
-// Locked shares must leave a non-negative remainder, and must add up to the amount
-// when every participant is locked.
+// Locked shares must leave a positive remainder for the unlocked participants, and must
+// add up to the amount when every participant is locked.
 export function getCustomSharesError(
   amount: number,
   participants: string[],
   customShares: Record<string, number>,
-): 'exceeds_total' | 'mismatch_total' | null {
+): 'exceeds_total' | 'mismatch_total' | 'no_remainder' | null {
   // The total is still being typed; Save is already disabled for amount <= 0.
   if (amount <= 0) return null;
   const locked = participants.filter((id) => customShares[id] !== undefined);
   const lockedTotal = locked.reduce((sum, id) => sum + customShares[id], 0);
   if (lockedTotal > amount + 0.01) return 'exceeds_total';
-  if (locked.length > 0 && locked.length === participants.length && Math.abs(lockedTotal - amount) > 0.01) {
-    return 'mismatch_total';
+  if (locked.length === 0) return null;
+  if (locked.length === participants.length) {
+    return Math.abs(lockedTotal - amount) > 0.01 ? 'mismatch_total' : null;
   }
+  // Unlocked participants would owe nothing; they should be deselected instead.
+  if (amount - lockedTotal <= 0.01) return 'no_remainder';
   return null;
 }
 
