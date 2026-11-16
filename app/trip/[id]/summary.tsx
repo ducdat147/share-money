@@ -1,49 +1,49 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator, Modal, TouchableOpacity, Animated, Pressable,
+  View, StyleSheet, ScrollView, ActivityIndicator, FlatList, Pressable,
 } from 'react-native';
 import ViewShot, { ViewShotRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTripStore } from '@/hooks/useTripStore';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import CustomHeader from '@/components/CustomHeader';
-import SummaryTable from '@/components/SummaryTable';
+import ScalePressable from '@/components/ScalePressable';
 import UserAvatar from '@/components/UserAvatar';
+import {
+  AppText, BottomSheet, Button, ListRow, SegmentedControl,
+} from '@/components/ui';
 import { useTranslation } from 'react-i18next';
-import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { ThemeColors, Spacing, BorderRadius } from '@/constants/theme';
 import {
   calculateSummary, calculateSettlements, formatCurrency, getFundFlow,
 } from '@/utils/calculator';
 import { MemberSummary, SettlementStrategy } from '@/utils/types';
 
+type SheetKind = 'strategy' | 'member' | 'fund';
+
 export default function SummaryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const insets = useSafeAreaInsets();
   const { trips, loadTrip } = useTripStore();
   const { colors } = useAppTheme();
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedSummary, setSelectedSummary] = useState<MemberSummary | null>(null);
-  const [showModal, setShowModal] = useState(false);
+  // Một bảng mở một lúc. Người được chọn giữ lại sau khi đóng để nội dung không biến mất giữa
+  // hoạt ảnh trượt xuống.
+  const [openSheet, setOpenSheet] = useState<SheetKind | null>(null);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
   const [strategy, setStrategy] = useState<SettlementStrategy>('optimal');
   const [pickedCentralId, setPickedCentralId] = useState<string | undefined>(undefined);
   const viewShotRef = useRef<ViewShotRef>(null);
 
-  const [overlayOpacity] = useState(() => new Animated.Value(0));
-  const [modalTranslateY] = useState(() => new Animated.Value(600));
-
   const trip = useMemo(() => trips.find((t) => t.id === id), [trips, id]);
 
   // Chưa chọn ai làm trung gian thì mặc định là thủ quỹ, không có thủ quỹ thì lấy thành viên đầu tiên.
   const centralMemberId = pickedCentralId || trip?.treasurerId || trip?.members[0]?.id;
-
-  // Mount Modal ngay khi chọn thành viên; effect bên dưới chạy animation, đóng xong mới unmount.
-  if (selectedSummary && !showModal) setShowModal(true);
 
   const handleShare = async () => {
     try {
@@ -59,39 +59,6 @@ export default function SummaryScreen() {
       console.error('Sharing error:', error);
     }
   };
-
-  useEffect(() => {
-    if (selectedSummary) {
-      Animated.parallel([
-        Animated.timing(overlayOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(modalTranslateY, {
-          toValue: 0,
-          friction: 9,
-          tension: 35,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(overlayOpacity, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(modalTranslateY, {
-          toValue: 600,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setShowModal(false);
-      });
-    }
-  }, [selectedSummary, overlayOpacity, modalTranslateY]);
 
   useEffect(() => {
     (async () => { if (id) { await loadTrip(id); setIsLoading(false); } })();
@@ -114,9 +81,44 @@ export default function SummaryScreen() {
     [trip],
   );
 
+  const strategyItems = useMemo(
+    () => [
+      { value: 'optimal' as const, label: t('summary.strategy_optimal_plain') },
+      { value: 'centralized' as const, label: t('summary.strategy_centralized_plain') },
+    ],
+    [t],
+  );
+
+  const closeSheet = useCallback(() => setOpenSheet(null), []);
+  const openStrategy = useCallback(() => setOpenSheet('strategy'), []);
+  const openFund = useCallback(() => setOpenSheet('fund'), []);
+
   const handleRowPress = useCallback((summary: MemberSummary) => {
-    setSelectedSummary(summary);
+    setSelectedMemberId(summary.memberId);
+    setOpenSheet('member');
   }, []);
+
+  const renderMember = useCallback(
+    ({ item }: { item: MemberSummary }) => {
+      const isTreasurer = item.memberId === trip?.treasurerId;
+      const sign = item.balance > 0.01 ? '+' : item.balance < -0.01 ? '−' : '';
+      const amountColor = item.balance > 0.01
+        ? colors.success
+        : item.balance < -0.01 ? colors.danger : colors.textSecondary;
+      return (
+        <View style={styles.rowCard}>
+          <ListRow
+            left={<UserAvatar name={item.name} isTreasurer={isTreasurer} size={36} />}
+            title={item.name}
+            subtitle={isTreasurer ? t('summary.treasurer') : undefined}
+            amount={`${sign}${formatCurrency(Math.abs(item.balance), trip?.currency)}`}
+            amountColor={amountColor}
+            onPress={() => handleRowPress(item)}
+          />
+        </View>
+      );
+    }, [trip?.treasurerId, trip?.currency, handleRowPress, styles, colors, t],
+  );
 
   if (isLoading || !trip) {
     return (
@@ -126,322 +128,328 @@ export default function SummaryScreen() {
     );
   }
 
-  const s = selectedSummary;
+  const s = summaries.find((item) => item.memberId === selectedMemberId);
   // The treasurer's debt only covers their own share; what they owe the group also
   // includes the other members' cash they still hold.
   const owed = s ? (s.memberId === treasurer?.id ? -s.balance : s.debt) : 0;
   const treasurerNet = treasurerSummary ? -treasurerSummary.balance : 0;
 
+  const listHeader = (
+    <View>
+      <View style={styles.transferCard}>
+        {/* Nền đặc để ảnh chia sẻ không trong suốt. Nút ⚙ nằm ngoài ViewShot nên không vào ảnh. */}
+        <ViewShot
+          ref={viewShotRef}
+          options={{ format: 'jpg', quality: 0.9 }}
+          style={styles.shot}
+        >
+          <AppText variant="title" weight="bold" numberOfLines={2}>{trip.name}</AppText>
+          {settlements.length > 0 ? (
+            <>
+              <AppText variant="label" weight="semibold" color={colors.textSecondary} style={styles.transfersTitle}>
+                {t('summary.transfers_count', { count: settlements.length })}
+              </AppText>
+              {settlements.map((item, idx) => (
+                <View key={idx} style={styles.transferRow}>
+                  <View style={styles.transferNames}>
+                    <AppText weight="semibold" numberOfLines={1} style={styles.transferName}>{item.fromName}</AppText>
+                    <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+                    <AppText weight="semibold" numberOfLines={1} style={styles.transferName}>{item.toName}</AppText>
+                  </View>
+                  <AppText weight="bold" numeric>{formatCurrency(item.amount, trip.currency)}</AppText>
+                </View>
+              ))}
+            </>
+          ) : (
+            <AppText color={colors.textSecondary} style={styles.emptySettlement}>
+              {t('summary.settlement_empty')}
+            </AppText>
+          )}
+          <Pressable onPress={openStrategy} style={styles.strategyLine} accessibilityRole="button">
+            <AppText variant="label" color={colors.textSecondary}>
+              {t('summary.strategy_line', {
+                strategy: t(strategy === 'optimal' ? 'summary.strategy_optimal_plain' : 'summary.strategy_centralized_plain'),
+              })}
+            </AppText>
+          </Pressable>
+        </ViewShot>
+        <ScalePressable
+          onPress={openStrategy}
+          style={styles.strategyGear}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t('summary.settlement_strategy_label')}
+        >
+          <Ionicons name="settings-outline" size={18} color={colors.textSecondary} />
+        </ScalePressable>
+      </View>
+
+      <AppText variant="label" weight="semibold" color={colors.textSecondary} style={styles.sectionTitle}>
+        {t('summary.section_details')}
+      </AppText>
+    </View>
+  );
+
+  const listFooter = treasurer && treasurerSummary ? (
+    <ScalePressable style={[styles.rowCard, styles.fundRow]} onPress={openFund} scaleTo={0.98} accessibilityRole="button">
+      <Ionicons name="wallet-outline" size={20} color={colors.textSecondary} />
+      <AppText weight="semibold" numeric style={styles.fundRowText}>
+        {t('summary.fund_row', { name: treasurer.name, amount: formatCurrency(treasurerSummary.fundHeld, trip.currency) })}
+      </AppText>
+    </ScalePressable>
+  ) : undefined;
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <CustomHeader title={t('summary.title')} />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <CustomHeader
+        title={t('summary.title')}
+        rightAction={
+          <ScalePressable
+            onPress={openStrategy}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('summary.settlement_strategy_label')}
+          >
+            <Ionicons name="settings-outline" size={22} color={colors.text} />
+          </ScalePressable>
+        }
+      />
 
+      <FlatList
+        data={summaries}
+        renderItem={renderMember}
+        keyExtractor={(item) => item.memberId}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      />
+
+      {settlements.length > 0 && (
+        <View style={styles.footer}>
+          <Button title={t('summary.share_settlement')} icon="share-social" onPress={handleShare} />
+        </View>
+      )}
+
+      <BottomSheet visible={openSheet === 'strategy'} onRequestClose={closeSheet}>
+        <View style={styles.sheetContent}>
+          <AppText variant="title" weight="bold">{t('summary.settlement_strategy_label')}</AppText>
+          <SegmentedControl items={strategyItems} value={strategy} onChange={setStrategy} />
+          {strategy === 'centralized' && (
+            <View style={styles.centralMemberSelector}>
+              <AppText variant="label" weight="semibold" color={colors.textSecondary}>
+                {t('summary.central_member_label')}
+              </AppText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+                {trip.members.map((m) => {
+                  const selected = centralMemberId === m.id;
+                  return (
+                    <Pressable
+                      key={m.id}
+                      style={[styles.chip, selected && styles.chipSelected]}
+                      onPress={() => setPickedCentralId(m.id)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                    >
+                      <AppText variant="label" weight="semibold" color={selected ? colors.onPrimary : colors.textSecondary}>
+                        {m.name}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      </BottomSheet>
+
+      <BottomSheet visible={openSheet === 'fund'} onRequestClose={closeSheet}>
         {treasurer && treasurerSummary && (
-          <View style={styles.treasurerBalance}>
-            <View style={styles.treasurerHeader}>
-              <UserAvatar 
-                name={treasurer.name} 
-                isTreasurer={true} 
-                size={40} 
-              />
-              <View>
-                <Text style={styles.treasurerBalanceLabel}>
+          <View style={styles.sheetContent}>
+            <View style={styles.fundHeader}>
+              <UserAvatar name={treasurer.name} isTreasurer size={40} />
+              <View style={styles.flex}>
+                <AppText variant="title" weight="bold" numberOfLines={1}>
                   {treasurer.name} ({t('summary.treasurer')})
-                </Text>
-                <Text style={styles.treasurerBalanceNote}>{t('summary.fund_status')}</Text>
+                </AppText>
+                <AppText variant="label" color={colors.textSecondary}>{t('summary.fund_status')}</AppText>
               </View>
             </View>
-            
-            <View style={styles.fundDetails}>
-              <Text style={styles.fundSectionLabel}>{t('summary.fund_group_money')}</Text>
-              <View style={styles.fundRow}>
-                <Text style={styles.fundLabel}>{t('summary.fund_received_others')}</Text>
-                <Text style={styles.fundValueSuccess}>{formatCurrency(fundFlow.received, trip.currency)}</Text>
+
+            <View style={styles.section}>
+              <AppText variant="caption" weight="bold" color={colors.textSecondary} style={styles.sectionLabel}>
+                {t('summary.fund_group_money')}
+              </AppText>
+              <View style={styles.itemRow}>
+                <AppText variant="label" color={colors.textSecondary} style={styles.flex}>{t('summary.fund_received_others')}</AppText>
+                <AppText variant="label" weight="bold" numeric color={colors.success}>{formatCurrency(fundFlow.received, trip.currency)}</AppText>
               </View>
-              <View style={styles.fundRow}>
-                <Text style={styles.fundLabel}>{t('summary.fund_spent_by_treasurer')}</Text>
-                <Text style={styles.fundValueDanger}>{formatCurrency(fundFlow.spent, trip.currency)}</Text>
+              <View style={styles.itemRow}>
+                <AppText variant="label" color={colors.textSecondary} style={styles.flex}>{t('summary.fund_spent_by_treasurer')}</AppText>
+                <AppText variant="label" weight="bold" numeric color={colors.danger}>{formatCurrency(fundFlow.spent, trip.currency)}</AppText>
               </View>
-              <View style={styles.fundRow}>
-                <Text style={styles.fundLabel}>{t('summary.fund_cash_held')}</Text>
-                <Text style={styles.fundValue}>{formatCurrency(treasurerSummary.fundHeld, trip.currency)}</Text>
+              <View style={styles.itemRow}>
+                <AppText variant="label" color={colors.textSecondary} style={styles.flex}>{t('summary.fund_cash_held')}</AppText>
+                <AppText variant="label" weight="bold" numeric>{formatCurrency(treasurerSummary.fundHeld, trip.currency)}</AppText>
               </View>
 
-              <Text style={[styles.fundSectionLabel, styles.fundSectionLabelSpaced]}>{t('summary.fund_treasurer_money')}</Text>
-              <View style={styles.fundRow}>
-                <Text style={styles.fundLabel}>{t('summary.fund_pocket_advanced')}</Text>
-                <Text style={styles.fundValue}>{formatCurrency(treasurerSummary.advancedPayments, trip.currency)}</Text>
+              <AppText variant="caption" weight="bold" color={colors.textSecondary} style={[styles.sectionLabel, styles.sectionLabelSpaced]}>
+                {t('summary.fund_treasurer_money')}
+              </AppText>
+              <View style={styles.itemRow}>
+                <AppText variant="label" color={colors.textSecondary} style={styles.flex}>{t('summary.fund_pocket_advanced')}</AppText>
+                <AppText variant="label" weight="bold" numeric>{formatCurrency(treasurerSummary.advancedPayments, trip.currency)}</AppText>
               </View>
-              <View style={styles.fundRow}>
-                <Text style={styles.fundLabel}>{t('summary.fund_own_share')}</Text>
-                <Text style={styles.fundValue}>{formatCurrency(treasurerSummary.totalShare, trip.currency)}</Text>
+              <View style={styles.itemRow}>
+                <AppText variant="label" color={colors.textSecondary} style={styles.flex}>{t('summary.fund_own_share')}</AppText>
+                <AppText variant="label" weight="bold" numeric>{formatCurrency(treasurerSummary.totalShare, trip.currency)}</AppText>
               </View>
 
-              <View style={[styles.fundRow, styles.fundRowTotal]}>
-                <Text style={styles.fundLabelTotal}>
+              <View style={[styles.itemRow, styles.subtotal]}>
+                <AppText weight="bold" style={styles.flex}>
                   {treasurerNet > 0.01
                     ? t('summary.treasurer_debt')
                     : treasurerNet < -0.01
                       ? t('summary.fund_net_group_owes')
                       : t('summary.even')}
-                </Text>
-                <Text style={[
-                  styles.fundValueTotal,
-                  { color: treasurerNet > 0.01 ? colors.danger : treasurerNet < -0.01 ? colors.success : colors.onSurface },
-                ]}>
+                </AppText>
+                <AppText
+                  weight="bold"
+                  numeric
+                  color={treasurerNet > 0.01 ? colors.danger : treasurerNet < -0.01 ? colors.success : colors.text}
+                >
                   {formatCurrency(Math.abs(treasurerNet), trip.currency)}
-                </Text>
+                </AppText>
               </View>
-              <Text style={styles.fundHint}>{t('summary.fund_net_hint')}</Text>
+              <AppText variant="caption" color={colors.textSecondary} style={styles.hint}>{t('summary.fund_net_hint')}</AppText>
             </View>
           </View>
         )}
+      </BottomSheet>
 
-        <View style={styles.tableSection}>
-          <Text style={styles.sectionTitle}>{t('summary.section_details')}</Text>
-          <SummaryTable
-            summaries={summaries}
-            treasurerId={treasurer?.id}
-            onRowPress={handleRowPress}
-            currencyCode={trip.currency}
-          />
-        </View>
-
-        <View style={styles.settlementSection}>
-          <Text style={styles.sectionTitle}>{t('summary.settlement_title')}</Text>
-
-          <View style={styles.strategyContainer}>
-            <Text style={styles.strategyLabel}>{t('summary.settlement_strategy_label')}</Text>
-            <View style={styles.strategyToggle}>
-              {(['optimal', 'centralized'] as const).map((strat) => (
-                <TouchableOpacity
-                  key={strat}
-                  style={[styles.strategyOption, strategy === strat && styles.strategyOptionActive]}
-                  onPress={() => setStrategy(strat)}
-                >
-                  <Text style={[styles.strategyText, strategy === strat && styles.strategyTextActive]}>
-                    {t(`summary.strategy_${strat}`)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+      <BottomSheet visible={openSheet === 'member'} onRequestClose={closeSheet}>
+        {s && (
+          <View style={styles.sheetContent}>
+            <View>
+              <AppText variant="title" weight="bold" numberOfLines={1}>{s.name}</AppText>
+              <AppText
+                weight="semibold"
+                numeric
+                color={owed > 0 ? colors.danger : owed < 0 ? colors.success : colors.textSecondary}
+                style={styles.owedLine}
+              >
+                {owed > 0
+                  ? t('summary.debt', { amount: formatCurrency(owed, trip.currency) })
+                  : owed < 0
+                    ? t('summary.refund', { amount: formatCurrency(Math.abs(owed), trip.currency) })
+                    : treasurer?.name === s.name ? t('summary.treasurer') : t('summary.even')}
+              </AppText>
             </View>
-          </View>
 
-          {strategy === 'centralized' && (
-            <View style={styles.centralMemberSelector}>
-              <Text style={styles.strategyLabel}>{t('summary.central_member_label')}</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.memberChips}>
-                {trip.members.map((m) => (
-                  <TouchableOpacity
-                    key={m.id}
-                    style={[styles.memberChip, centralMemberId === m.id && styles.memberChipActive]}
-                    onPress={() => setPickedCentralId(m.id)}
-                  >
-                    <Text style={[styles.memberChipText, centralMemberId === m.id && styles.memberChipTextActive]}>
-                      {m.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          <ViewShot
-            ref={viewShotRef}
-            options={{ format: 'jpg', quality: 0.9 }}
-            style={{ backgroundColor: colors.background, borderRadius: BorderRadius.lg, overflow: 'hidden' }}
-          >
-            <View style={styles.settlementContainer}>
-              <Text style={styles.settlementDesc}>{t('summary.settlement_desc')}</Text>
-              {settlements.length > 0 ? (
-                settlements.map((item, idx) => (
-                  <View key={idx} style={styles.settlementItem}>
-                    <View style={styles.settlementAvatarRow}>
-                      <View style={styles.settlementNameBox}>
-                        <Text style={styles.settlementNameFrom}>{item.fromName}</Text>
-                      </View>
-                      <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-                      <View style={styles.settlementNameBox}>
-                        <Text style={styles.settlementNameTo}>{item.toName}</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.settlementAmount}>{formatCurrency(item.amount, trip.currency)}</Text>
+            {s.items.length > 0 && (
+              <View style={styles.section}>
+                <AppText variant="caption" weight="bold" color={colors.textSecondary} style={styles.sectionLabel}>
+                  {t('summary.expenses_list')}
+                </AppText>
+                {s.items.map((item, idx) => (
+                  <View key={idx} style={styles.itemRow}>
+                    <AppText variant="label" color={colors.textSecondary} style={styles.flex}>{item.description}</AppText>
+                    <AppText variant="label" weight="semibold" numeric>{formatCurrency(item.share, trip.currency)}</AppText>
                   </View>
-                ))
-              ) : (
-                <Text style={styles.emptySettlement}>{t('summary.settlement_empty')}</Text>
-              )}
-            </View>
-          </ViewShot>
-
-          {settlements.length > 0 && (
-            <TouchableOpacity 
-              onPress={handleShare} 
-              style={styles.shareActionBtn} 
-              activeOpacity={0.8}
-            >
-              <Ionicons name="share-social" size={20} color={colors.onPrimary} />
-              <Text style={styles.shareActionBtnText}>{t('summary.share_settlement')}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </ScrollView>
-
-      <Modal
-        visible={showModal}
-        transparent
-        animationType="none"
-        onRequestClose={() => setSelectedSummary(null)}
-      >
-        <View style={styles.modalContainer}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedSummary(null)}>
-            <Animated.View style={[styles.modalOverlay, { opacity: overlayOpacity }]} />
-          </Pressable>
-          <Animated.View style={[
-            styles.modalSheet, 
-            { transform: [{ translateY: modalTranslateY }] },
-            { paddingBottom: insets.bottom + Spacing.lg }
-          ]}>
-            <View style={styles.modalHandle} />
-
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalName}>{s?.name}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                  <Text style={[
-                    styles.modalDebt,
-                    s && owed > 0 && { color: colors.danger },
-                    s && owed < 0 && { color: colors.success },
-                    s && owed === 0 && { color: colors.textMuted, marginTop: 0 },
-                  ]}>
-                    {s
-                      ? owed > 0
-                        ? t('summary.debt', { amount: formatCurrency(owed, trip.currency) })
-                        : owed < 0
-                          ? t('summary.refund', { amount: formatCurrency(Math.abs(owed), trip.currency) })
-                          : treasurer?.name === s.name ? t('summary.treasurer') : t('summary.even')
-                      : ''}
-                  </Text>
+                ))}
+                <View style={[styles.itemRow, styles.subtotal]}>
+                  <AppText variant="label" weight="bold" style={styles.flex}>{t('summary.total_share')}</AppText>
+                  <AppText weight="bold" numeric>{formatCurrency(s.totalShare, trip.currency)}</AppText>
                 </View>
               </View>
-              <TouchableOpacity onPress={() => setSelectedSummary(null)} hitSlop={8}>
-                <Ionicons name="close-circle" size={28} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
+            )}
 
-            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-              {s && s.items.length > 0 && (
-                <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>{t('summary.expenses_list')}</Text>
-                  {s.items.map((item: any, idx: number) => (
-                    <View key={idx} style={styles.modalItemRow}>
-                      <Text style={styles.modalItemDesc}>{item.description}</Text>
-                      <Text style={styles.modalItemAmount}>{formatCurrency(item.share, trip.currency)}</Text>
+            {(s.fundPayments > 0 || s.advancedPayments > 0 || s.fundHeld > 0) && (
+              <View style={styles.section}>
+                <AppText variant="caption" weight="bold" color={colors.textSecondary} style={styles.sectionLabel}>
+                  {t('summary.paid_and_advanced')}
+                </AppText>
+
+                {s.fundPayments > 0 && (
+                  <View style={styles.itemRow}>
+                    <View style={styles.iconLabel}>
+                      <Ionicons name="wallet-outline" size={16} color={colors.success} />
+                      <AppText variant="label" color={colors.textSecondary} style={styles.flex}>{t('summary.fund_paid_label')}</AppText>
                     </View>
-                  ))}
-                  <View style={styles.modalSubtotal}>
-                    <Text style={styles.modalSubtotalLabel}>{t('summary.total_share')}</Text>
-                    <Text style={styles.modalSubtotalValue}>{formatCurrency(s.totalShare, trip.currency)}</Text>
+                    <AppText variant="label" weight="semibold" numeric color={colors.success}>
+                      {formatCurrency(s.fundPayments, trip.currency)}
+                    </AppText>
                   </View>
-                </View>
-              )}
+                )}
 
-              {s && (s.fundPayments > 0 || s.advancedPayments > 0 || s.fundHeld > 0) && (
-                <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>{t('summary.paid_and_advanced')}</Text>
-                  
-                  {s.fundPayments > 0 && (
-                    <View style={styles.modalItemRow}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                        <Ionicons name="wallet-outline" size={16} color={colors.success} />
-                        <Text style={styles.modalItemDesc}>{t('summary.fund_paid_label', { defaultValue: 'Tiền đã đóng quỹ' })}</Text>
-                      </View>
-                      <Text style={[styles.modalItemAmount, { color: colors.success }]}>
-                        {formatCurrency(s.fundPayments, trip.currency)}
-                      </Text>
+                {s.advancedPayments > 0 && (
+                  <View style={styles.itemRow}>
+                    <View style={styles.iconLabel}>
+                      <Ionicons name="cash-outline" size={16} color={colors.info} />
+                      <AppText variant="label" color={colors.textSecondary} style={styles.flex}>{t('summary.advanced_paid_label')}</AppText>
                     </View>
-                  )}
-
-                  {s.advancedPayments > 0 && (
-                    <View style={styles.modalItemRow}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                        <Ionicons name="cash-outline" size={16} color={colors.info} />
-                        <Text style={styles.modalItemDesc}>{t('summary.advanced_paid_label', { defaultValue: 'Tiền tự chi trả' })}</Text>
-                      </View>
-                      <Text style={[styles.modalItemAmount, { color: colors.info }]}>
-                        {formatCurrency(s.advancedPayments, trip.currency)}
-                      </Text>
-                    </View>
-                  )}
-
-                  {s.advancedItems && s.advancedItems.length > 0 && (
-                    <View style={styles.advancedItemsList}>
-                      {s.advancedItems.map((adv: any, idx: number) => (
-                        <View key={`adv-${idx}`} style={styles.advancedItemRow}>
-                          <Text style={styles.advancedItemDesc}>• {adv.description}</Text>
-                          <Text style={styles.advancedItemAmount}>{formatCurrency(adv.amount, trip.currency)}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  <View style={styles.modalSubtotal}>
-                    <Text style={styles.modalSubtotalLabel}>{t('summary.total_paid_label')}</Text>
-                    <Text style={[styles.modalSubtotalValue, { color: colors.success }]}>{formatCurrency(s.totalPaid, trip.currency)}</Text>
+                    <AppText variant="label" weight="semibold" numeric color={colors.info}>
+                      {formatCurrency(s.advancedPayments, trip.currency)}
+                    </AppText>
                   </View>
+                )}
 
-                  {s.fundHeld > 0 && (
-                    <View style={[styles.modalSubtotal, { borderStyle: 'dashed' }]}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Ionicons name="briefcase" size={16} color={colors.accentLight} />
-                        <Text style={[styles.modalSubtotalLabel, { color: colors.accentLight }]}>{t('summary.fund_held_label', { defaultValue: 'Quỹ đang giữ' })}</Text>
+                {s.advancedItems.length > 0 && (
+                  <View style={styles.advancedItems}>
+                    {s.advancedItems.map((adv, idx) => (
+                      <View key={`adv-${idx}`} style={styles.itemRow}>
+                        <AppText variant="caption" color={colors.textSecondary} style={styles.flex}>• {adv.description}</AppText>
+                        <AppText variant="caption" numeric color={colors.textSecondary}>{formatCurrency(adv.amount, trip.currency)}</AppText>
                       </View>
-                      <Text style={[styles.modalSubtotalValue, { color: colors.accentLight }]}>
-                        {formatCurrency(s.fundHeld, trip.currency)}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {s && owed !== 0 && (
-                <View style={[
-                  styles.modalSection,
-                  styles.balanceCard,
-                  { borderColor: owed > 0 ? colors.danger : colors.success }
-                ]}>
-                  <View style={styles.balanceHeader}>
-                    <Ionicons
-                      name={owed > 0 ? "alert-circle" : "checkmark-circle"}
-                      size={20}
-                      color={owed > 0 ? colors.danger : colors.success}
-                    />
-                    <Text style={[
-                      styles.balanceLabel,
-                      { color: owed > 0 ? colors.danger : colors.success }
-                    ]}>
-                      {owed > 0
-                        ? (s.memberId === treasurer?.id ? t('summary.treasurer_debt', { defaultValue: 'Cần hoàn trả lại nhóm' }) : t('summary.debt_title', { defaultValue: 'Khoản cần đóng' })) 
-                        : t('summary.refund_due')}
-                    </Text>
+                    ))}
                   </View>
-                  <Text style={[
-                    styles.balanceAmount,
-                    { color: owed > 0 ? colors.danger : colors.success }
-                  ]}>
-                    {formatCurrency(Math.abs(owed), trip.currency)}
-                  </Text>
-                </View>
-              )}
+                )}
 
-              {s && s.items.length === 0 && s.totalPaid === 0 && (
-                <Text style={styles.modalEmpty}>{t('summary.no_expenses')}</Text>
-              )}
-            </ScrollView>
-          </Animated.View>
-        </View>
-      </Modal>
+                <View style={[styles.itemRow, styles.subtotal]}>
+                  <AppText variant="label" weight="bold" style={styles.flex}>{t('summary.total_paid_label')}</AppText>
+                  <AppText weight="bold" numeric color={colors.success}>{formatCurrency(s.totalPaid, trip.currency)}</AppText>
+                </View>
+
+                {s.fundHeld > 0 && (
+                  <View style={[styles.itemRow, styles.subtotal, styles.dashed]}>
+                    <View style={styles.iconLabel}>
+                      <Ionicons name="briefcase" size={16} color={colors.accent} />
+                      <AppText variant="label" weight="bold" color={colors.accent}>{t('summary.fund_held_label')}</AppText>
+                    </View>
+                    <AppText weight="bold" numeric color={colors.accent}>
+                      {formatCurrency(s.fundHeld, trip.currency)}
+                    </AppText>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {owed !== 0 && (
+              <View style={[styles.section, styles.balanceCard, { borderColor: owed > 0 ? colors.danger : colors.success }]}>
+                <View style={styles.iconLabel}>
+                  <Ionicons
+                    name={owed > 0 ? 'alert-circle' : 'checkmark-circle'}
+                    size={20}
+                    color={owed > 0 ? colors.danger : colors.success}
+                  />
+                  <AppText variant="label" weight="bold" color={owed > 0 ? colors.danger : colors.success}>
+                    {owed > 0
+                      ? (s.memberId === treasurer?.id ? t('summary.treasurer_debt') : t('summary.debt_title'))
+                      : t('summary.refund_due')}
+                  </AppText>
+                </View>
+                <AppText variant="hero" weight="bold" numeric color={owed > 0 ? colors.danger : colors.success}>
+                  {formatCurrency(Math.abs(owed), trip.currency)}
+                </AppText>
+              </View>
+            )}
+
+            {s.items.length === 0 && s.totalPaid === 0 && (
+              <AppText color={colors.textSecondary} style={styles.emptySettlement}>{t('summary.no_expenses')}</AppText>
+            )}
+          </View>
+        )}
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -450,268 +458,72 @@ function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
-    content: { padding: Spacing.lg },
-    treasurerBalance: {
-      backgroundColor: colors.surfaceElevated, borderRadius: BorderRadius.md,
-      padding: Spacing.md, marginBottom: Spacing.lg,
-      borderWidth: 1, borderColor: colors.primaryDark,
-    },
-    treasurerHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.md },
-    treasurerBalanceLabel: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: colors.onSurfaceElevated },
-    treasurerBalanceNote: { fontSize: FontSize.xs, color: colors.onSurfaceSecondary, marginTop: 2 },
-    fundDetails: {
-      backgroundColor: colors.surface,
-      borderRadius: BorderRadius.sm,
-      padding: Spacing.sm,
-    },
-    fundRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingVertical: Spacing.xs,
-    },
-    fundRowTotal: {
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-      marginTop: Spacing.xs,
-      paddingTop: Spacing.sm,
-    },
-    fundSectionLabel: {
-      fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: colors.onSurfaceMuted,
-      textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.xs,
-    },
-    fundSectionLabelSpaced: { marginTop: Spacing.md },
-    fundLabel: { fontSize: FontSize.sm, color: colors.onSurfaceSecondary },
-    fundValue: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: colors.onSurface },
-    fundValueSuccess: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: colors.success },
-    fundValueDanger: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: colors.danger },
-    fundLabelTotal: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: colors.onSurface },
-    fundValueTotal: { fontSize: FontSize.md, fontWeight: FontWeight.bold },
-    fundHint: { fontSize: FontSize.xs, color: colors.onSurfaceMuted, marginTop: Spacing.xs },
+    content: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg },
+    flex: { flex: 1 },
 
-    tableSection: { marginBottom: Spacing.lg },
-    sectionTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: colors.onBackground, marginBottom: Spacing.md },
-    
-    strategyContainer: {
-      marginBottom: Spacing.md,
+    transferCard: {
+      borderRadius: BorderRadius.md, borderWidth: 1, borderColor: colors.border,
+      overflow: 'hidden', marginBottom: Spacing.xl,
     },
-    strategyLabel: {
-      fontSize: FontSize.xs,
-      fontWeight: FontWeight.bold,
-      color: colors.textSecondary,
-      textTransform: 'uppercase',
-      marginBottom: Spacing.sm,
-    },
-    strategyToggle: {
-      flexDirection: 'row',
-      backgroundColor: colors.surface,
-      borderRadius: BorderRadius.md,
-      padding: 4,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    strategyOption: {
-      flex: 1,
-      paddingVertical: 8,
-      alignItems: 'center',
-      borderRadius: BorderRadius.sm,
-    },
-    strategyOptionActive: {
-      backgroundColor: colors.primary,
-    },
-    strategyText: {
-      fontSize: FontSize.sm,
-      fontWeight: FontWeight.semibold,
-      color: colors.textSecondary,
-    },
-    strategyTextActive: {
-      color: colors.onPrimary,
-    },
-    centralMemberSelector: {
-      marginBottom: Spacing.lg,
-    },
-    memberChips: {
-      gap: Spacing.sm,
-      paddingVertical: 2,
-    },
-    memberChip: {
-      paddingHorizontal: Spacing.md,
-      paddingVertical: 6,
-      borderRadius: BorderRadius.full,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    memberChipActive: {
-      backgroundColor: colors.primaryDark,
-      borderColor: colors.primary,
-    },
-    memberChipText: {
-      fontSize: FontSize.sm,
-      color: colors.textSecondary,
-    },
-    memberChipTextActive: {
-      color: colors.onPrimary,
-      fontWeight: FontWeight.bold,
-    },
-
-    shareActionBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: Spacing.sm,
-      backgroundColor: colors.primary,
-      paddingVertical: Spacing.md,
-      borderRadius: BorderRadius.md,
-      marginTop: Spacing.md,
-    },
-    shareActionBtnText: {
-      fontSize: FontSize.md,
-      fontWeight: FontWeight.bold,
-      color: colors.onPrimary,
-    },
-
-    settlementSection: { marginBottom: Spacing.xl },
-    settlementContainer: {
-      backgroundColor: colors.surface,
-      borderRadius: BorderRadius.lg,
-      padding: Spacing.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    settlementDesc: {
-      fontSize: FontSize.xs,
-      color: colors.onSurfaceSecondary,
-      marginBottom: Spacing.md,
-      fontStyle: 'italic',
-    },
-    settlementItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      backgroundColor: colors.surfaceElevated,
-      padding: Spacing.md,
-      borderRadius: BorderRadius.md,
-      marginBottom: Spacing.sm,
-      borderLeftWidth: 4,
-      borderLeftColor: colors.primary,
-    },
-    settlementAvatarRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.sm,
-      flex: 1,
-    },
-    settlementNameBox: {
-      backgroundColor: colors.surface,
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: 4,
-      borderRadius: BorderRadius.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    settlementNameFrom: {
-      fontSize: FontSize.sm,
-      fontWeight: FontWeight.bold,
-      color: colors.onSurfaceElevated,
-    },
-    settlementNameTo: {
-      fontSize: FontSize.sm,
-      fontWeight: FontWeight.bold,
-      color: colors.primary,
-    },
-    settlementAmount: {
-      fontSize: FontSize.md,
-      fontWeight: FontWeight.extrabold,
-      color: colors.onSurfaceElevated,
-      marginLeft: Spacing.md,
-    },
-    emptySettlement: {
-      textAlign: 'center',
-      color: colors.onSurfaceMuted,
-      fontSize: FontSize.sm,
-      paddingVertical: Spacing.md,
-    },
-
-    modalContainer: {
-      flex: 1,
-      justifyContent: 'flex-end',
-    },
-    modalOverlay: {
-      ...StyleSheet.absoluteFill,
-      backgroundColor: colors.overlay,
-    },
-    modalSheet: {
-      backgroundColor: colors.background,
-      borderTopLeftRadius: 24, borderTopRightRadius: 24,
-      paddingTop: Spacing.md, maxHeight: '85%',
-      borderWidth: 1, borderColor: colors.border,
-    },
-    modalHandle: {
-      width: 40, height: 4, borderRadius: 2,
-      backgroundColor: colors.border, alignSelf: 'center', marginBottom: Spacing.md,
-    },
-    modalHeader: {
-      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-      paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md,
+    shot: { backgroundColor: colors.surface, padding: Spacing.lg },
+    transfersTitle: { marginTop: Spacing.md, marginBottom: Spacing.xs },
+    transferRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      gap: Spacing.md, paddingVertical: Spacing.sm,
       borderBottomWidth: 1, borderBottomColor: colors.border,
     },
-    modalName: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: colors.onBackground },
-    modalDebt: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, marginTop: 2 },
-    modalScroll: { paddingHorizontal: Spacing.lg },
-    modalSection: {
-      marginTop: Spacing.lg,
-      backgroundColor: colors.surface,
-      borderRadius: BorderRadius.md,
-      padding: Spacing.md,
-      borderWidth: 1, borderColor: colors.border,
+    transferNames: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 },
+    transferName: { flexShrink: 1 },
+    emptySettlement: { textAlign: 'center', paddingVertical: Spacing.lg },
+    // Chừa chỗ bên phải cho nút ⚙ đặt đè, nằm ngoài ViewShot.
+    strategyLine: { marginTop: Spacing.md, minHeight: 24, justifyContent: 'center', paddingRight: Spacing.xxxl },
+    strategyGear: {
+      position: 'absolute', right: Spacing.lg, bottom: Spacing.lg,
+      height: 24, justifyContent: 'center',
     },
-    modalSectionTitle: {
-      fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: colors.onSurfaceMuted,
-      textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.sm,
+
+    sectionTitle: { marginBottom: Spacing.sm },
+    rowCard: {
+      backgroundColor: colors.surface, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: colors.border,
+      marginBottom: Spacing.sm, overflow: 'hidden',
     },
-    modalItemRow: {
+    fundRow: {
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+      paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, marginTop: Spacing.md,
+    },
+    fundRowText: { flex: 1 },
+
+    footer: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.sm },
+
+    sheetContent: { gap: Spacing.lg },
+    centralMemberSelector: { gap: Spacing.sm },
+    chips: { gap: Spacing.sm },
+    chip: {
+      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
+      borderRadius: BorderRadius.full, borderWidth: 1, borderColor: colors.border,
+    },
+    chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+
+    fundHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+    owedLine: { marginTop: Spacing.xs },
+    section: {
+      backgroundColor: colors.background, borderRadius: BorderRadius.md,
+      padding: Spacing.md, borderWidth: 1, borderColor: colors.border,
+    },
+    sectionLabel: { textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.sm },
+    sectionLabelSpaced: { marginTop: Spacing.md },
+    itemRow: {
       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-      paddingVertical: Spacing.xs,
+      gap: Spacing.md, paddingVertical: Spacing.xs,
     },
-    modalItemDesc: { fontSize: FontSize.sm, color: colors.onSurfaceSecondary, flex: 1 },
-    modalItemAmount: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: colors.onSurface },
-    advancedItemsList: {
-      paddingLeft: Spacing.xl,
-      marginBottom: Spacing.xs,
-    },
-    advancedItemRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingVertical: 2,
-    },
-    advancedItemDesc: {
-      fontSize: FontSize.xs,
-      color: colors.onSurfaceMuted,
-      fontStyle: 'italic',
-      flex: 1,
-    },
-    advancedItemAmount: {
-      fontSize: FontSize.xs,
-      color: colors.onSurfaceMuted,
-      fontStyle: 'italic',
-    },
-    modalSubtotal: {
-      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    iconLabel: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 },
+    advancedItems: { paddingLeft: Spacing.xl, marginBottom: Spacing.xs },
+    subtotal: {
       marginTop: Spacing.sm, paddingTop: Spacing.sm,
       borderTopWidth: 1, borderTopColor: colors.border,
     },
-    modalSubtotalLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: colors.onSurface },
-    modalSubtotalValue: { fontSize: FontSize.md, fontWeight: FontWeight.extrabold, color: colors.onSurface },
-    modalEmpty: {
-      textAlign: 'center', color: colors.onSurfaceMuted, fontSize: FontSize.md,
-      paddingVertical: Spacing.xl,
-    },
-    balanceCard: {
-      borderWidth: 2,
-      padding: Spacing.md,
-    },
-    balanceHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
-    balanceLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.bold },
-    balanceAmount: { fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold },
+    dashed: { borderStyle: 'dashed' },
+    hint: { marginTop: Spacing.xs },
+    balanceCard: { borderWidth: 2, gap: Spacing.sm },
   });
 }
