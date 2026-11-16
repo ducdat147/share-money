@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
-  Platform, Modal, FlatList,
+  Platform, Modal, FlatList, Keyboard, type ScrollViewInstance,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +16,7 @@ import SubmitButton from '@/components/SubmitButton';
 import { useDialog } from '@/components/DialogProvider';
 import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
-import { formatCurrency, roundCurrency } from '@/utils/calculator';
+import { getCustomSharesError, getExpenseShares } from '@/utils/calculator';
 import { parseAmountInput } from '@/utils/currency';
 
 export default function AddExpenseScreen() {
@@ -41,6 +41,12 @@ export default function AddExpenseScreen() {
   const [selectedMembers, setSelectedMembers] = useState<string[]>(
     existingExpense?.participants ?? trip?.members.map((m) => m.id) ?? [],
   );
+  // Chuỗi đang gõ của người bị khoá; có key nghĩa là đang khoá.
+  const [shareTexts, setShareTexts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      Object.entries(existingExpense?.customShares ?? {}).map(([memberId, share]) => [memberId, share.toString()]),
+    ),
+  );
   const [paidBy, setPaidBy] = useState<string | undefined>(
     existingExpense?.paidBy || (trip?.treasurerId ?? trip?.members[0]?.id),
   );
@@ -52,14 +58,28 @@ export default function AddExpenseScreen() {
     [amountText, trip?.currency],
   );
 
-  const perPerson = useMemo(
-    () => (selectedMembers.length > 0 ? amount / selectedMembers.length : 0),
-    [amount, selectedMembers.length],
+  const customShares = useMemo(
+    () => Object.fromEntries(
+      Object.entries(shareTexts)
+        .filter(([memberId]) => selectedMembers.includes(memberId))
+        .map(([memberId, text]) => [memberId, parseAmountInput(text, trip?.currency)]),
+    ),
+    [shareTexts, selectedMembers, trip?.currency],
   );
 
-  const shareText = useMemo(
-    () => (perPerson > 0 ? formatCurrency(roundCurrency(perPerson, trip?.currency), trip?.currency) : undefined),
-    [perPerson, trip?.currency],
+  const shares = useMemo(
+    () => getExpenseShares({ amount, participants: selectedMembers, customShares }),
+    [amount, selectedMembers, customShares],
+  );
+
+  const sharesError = useMemo(
+    () => getCustomSharesError(amount, selectedMembers, customShares),
+    [amount, selectedMembers, customShares],
+  );
+
+  const hasNegativeShare = useMemo(
+    () => Object.values(customShares).some((share) => share < 0),
+    [customShares],
   );
 
   const payerMember = useMemo(
@@ -73,6 +93,47 @@ export default function AddExpenseScreen() {
         ? prev.filter((id) => id !== memberId)
         : [...prev, memberId],
     );
+    // Bỏ chọn hay chọn lại đều bắt đầu từ chia đều.
+    setShareTexts(({ [memberId]: _removed, ...rest }) => rest);
+  }, []);
+
+  // Ô nhập phần tiền nằm cuối form nên dễ bị bàn phím che: cuộn dòng đang nhập lên đầu vùng nhìn thấy,
+  // cả ngay lúc focus lẫn sau khi bàn phím mở xong và KeyboardAvoidingView đã co lại.
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const membersY = useRef(0);
+  const focusedShareY = useRef<number | null>(null);
+
+  const scrollToShare = useCallback(() => {
+    if (focusedShareY.current === null) return;
+    scrollRef.current?.scrollTo({ y: Math.max(0, membersY.current + focusedShareY.current - Spacing.lg), animated: true });
+  }, []);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      timer = setTimeout(() => {
+        scrollToShare();
+        focusedShareY.current = null;
+      }, 50);
+    });
+    // Ô tiền đã mất focus khi bàn phím đóng; không để lần mở bàn phím sau (từ ô khác) cuộn về dòng cũ.
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      focusedShareY.current = null;
+    });
+    return () => {
+      sub.remove();
+      hideSub.remove();
+      clearTimeout(timer);
+    };
+  }, [scrollToShare]);
+
+  const handleShareFocus = useCallback((offsetY: number) => {
+    focusedShareY.current = offsetY;
+    scrollToShare();
+  }, [scrollToShare]);
+
+  const handleChangeShare = useCallback((memberId: string, text: string) => {
+    setShareTexts(({ [memberId]: _removed, ...rest }) => (text.trim() ? { ...rest, [memberId]: text } : rest));
   }, []);
 
   const handleSelectAll = useCallback(() => {
@@ -81,6 +142,7 @@ export default function AddExpenseScreen() {
 
   const handleDeselectAll = useCallback(() => {
     setSelectedMembers([]);
+    setShareTexts({});
   }, []);
 
   const handleSubmit = useCallback(async () => {
@@ -89,13 +151,19 @@ export default function AddExpenseScreen() {
     if (amount <= 0) { showDialog(t('common.error'), t('add_payment.err_invalid_amount')); return; }
     if (!payerMember) { showDialog(t('common.error'), t('add_expense.err_no_payer')); return; }
     if (selectedMembers.length === 0) { showDialog(t('common.error'), t('add_expense.err_no_participants')); return; }
+    if (hasNegativeShare) { showDialog(t('common.error'), t('add_payment.err_invalid_amount')); return; }
+    if (sharesError) {
+      showDialog(t('common.error'), t(sharesError === 'exceeds_total' ? 'add_expense.err_shares_exceed' : 'add_expense.err_shares_mismatch'));
+      return;
+    }
+    const lockedShares = Object.keys(customShares).length > 0 ? customShares : undefined;
 
     setIsSubmitting(true);
     try {
       if (expenseId) {
-        await updateExpense(id!, expenseId, desc, amount, selectedMembers, paidBy);
+        await updateExpense(id!, expenseId, desc, amount, selectedMembers, paidBy, lockedShares);
       } else {
-        await addExpense(id!, desc, amount, selectedMembers, paidBy);
+        await addExpense(id!, desc, amount, selectedMembers, paidBy, lockedShares);
       }
       router.back();
     } catch {
@@ -103,7 +171,7 @@ export default function AddExpenseScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [description, amount, payerMember, selectedMembers, paidBy, id, expenseId, updateExpense, addExpense, router]);
+  }, [description, amount, payerMember, selectedMembers, hasNegativeShare, sharesError, customShares, paidBy, id, expenseId, updateExpense, addExpense, router]);
 
   if (!trip) return null;
 
@@ -115,6 +183,7 @@ export default function AddExpenseScreen() {
         style={styles.flex}
       >
         <ScrollView
+          ref={scrollRef}
           style={styles.flex}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
@@ -175,7 +244,7 @@ export default function AddExpenseScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.section}>
+          <View style={styles.section} onLayout={(e) => { membersY.current = e.nativeEvent.layout.y; }}>
             <MemberSelector
               members={trip.members}
               selected={selectedMembers}
@@ -183,7 +252,14 @@ export default function AddExpenseScreen() {
               onSelectAll={handleSelectAll}
               onDeselectAll={handleDeselectAll}
               treasurerId={trip.treasurerId}
-              share={shareText}
+              shares={shares}
+              shareTexts={shareTexts}
+              onChangeShare={handleChangeShare}
+              onShareFocus={handleShareFocus}
+              error={sharesError
+                ? t(sharesError === 'exceeds_total' ? 'add_expense.err_shares_exceed' : 'add_expense.err_shares_mismatch')
+                : hasNegativeShare ? t('add_payment.err_invalid_amount') : undefined}
+              currencyCode={trip.currency}
             />
           </View>
         </ScrollView>
@@ -192,7 +268,7 @@ export default function AddExpenseScreen() {
           title={isSubmitting ? t('add_expense.submitting') : (expenseId ? t('add_expense.update_btn') : t('add_expense.submit'))}
           icon="checkmark-circle"
           onPress={handleSubmit}
-          disabled={isSubmitting || !description.trim() || amount <= 0 || !payerMember || selectedMembers.length === 0}
+          disabled={isSubmitting || !description.trim() || amount <= 0 || !payerMember || selectedMembers.length === 0 || hasNegativeShare || sharesError !== null}
         />
       </KeyboardAvoidingView>
 

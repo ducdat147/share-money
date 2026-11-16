@@ -19,6 +19,41 @@ export function getFundFlow(
   return { received, spent };
 }
 
+// What each participant owes for one expense. Locked shares are taken as-is and the
+// remaining participants split what is left equally. Values stay unrounded.
+export function getExpenseShares(
+  expense: Pick<Expense, 'amount' | 'participants' | 'customShares'>,
+): Record<string, number> {
+  const locked = expense.participants.filter((id) => expense.customShares?.[id] !== undefined);
+  const lockedTotal = locked.reduce((sum, id) => sum + expense.customShares![id], 0);
+  const unlockedCount = expense.participants.length - locked.length;
+  const equalShare = unlockedCount > 0 ? (expense.amount - lockedTotal) / unlockedCount : 0;
+
+  const shares: Record<string, number> = {};
+  for (const id of expense.participants) {
+    shares[id] = expense.customShares?.[id] ?? equalShare;
+  }
+  return shares;
+}
+
+// Locked shares must leave a non-negative remainder, and must add up to the amount
+// when every participant is locked.
+export function getCustomSharesError(
+  amount: number,
+  participants: string[],
+  customShares: Record<string, number>,
+): 'exceeds_total' | 'mismatch_total' | null {
+  // The total is still being typed; Save is already disabled for amount <= 0.
+  if (amount <= 0) return null;
+  const locked = participants.filter((id) => customShares[id] !== undefined);
+  const lockedTotal = locked.reduce((sum, id) => sum + customShares[id], 0);
+  if (lockedTotal > amount + 0.01) return 'exceeds_total';
+  if (locked.length > 0 && locked.length === participants.length && Math.abs(lockedTotal - amount) > 0.01) {
+    return 'mismatch_total';
+  }
+  return null;
+}
+
 export function calculateSummary(
   members: Member[],
   expenses: Expense[],
@@ -36,7 +71,7 @@ export function calculateSummary(
       .filter((expense) => expense.participants.includes(member.id))
       .map((expense) => ({
         description: expense.description,
-        share: expense.amount / expense.participants.length,
+        share: getExpenseShares(expense)[member.id],
       }));
 
     const totalShare = items.reduce((sum, item) => sum + item.share, 0);

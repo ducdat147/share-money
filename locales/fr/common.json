@@ -16,7 +16,10 @@
 		"submitting": "Ajout en cours...",
 		"title": "Ajouter une dépense",
 		"update_btn": "Mettre à jour",
-		"update_title": "Modifier la dépense"
+		"update_title": "Modifier la dépense",
+		"err_shares_exceed": "Les montants fixés dépassent le total de la dépense",
+		"err_shares_mismatch": "La somme des montants doit égaler le total de la dépense",
+		"custom_split": "Répartition personnalisée"
 	},
 	"add_payment": {
 		"amount_label": "Montant",
@@ -60,7 +63,8 @@
 		"select_all": "Tout sélectionner",
 		"select_at_least_one": "Sélectionnez au moins une personne",
 		"split_equally": "Partagé à parts égales entre {{count}} personnes",
-		"total_expense": "Total dépensé"
+		"total_expense": "Total dépensé",
+		"split_custom_hint": "Saisissez un montant par personne ; les champs vides se partagent le reste"
 	},
 	"create_trip": {
 		"currency_label": "Devise",

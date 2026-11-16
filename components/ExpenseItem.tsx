@@ -26,6 +26,7 @@ const ExpenseItem: React.FC<ExpenseItemProps> = React.memo(
       ? members.find((m: Member) => m.id === expense.paidBy)?.name ?? t('summary.treasurer')
       : t('summary.treasurer');
 
+    const hasCustomShares = Object.keys(expense.customShares ?? {}).length > 0;
     const perPerson = expense.participants.length > 0
       ? expense.amount / expense.participants.length
       : 0;
@@ -56,7 +57,9 @@ const ExpenseItem: React.FC<ExpenseItemProps> = React.memo(
               {participantNames}
             </Text>
             <Text style={styles.perPerson}>
-              {t('add_expense.per_person', { amount: formatCurrency(roundCurrency(perPerson, currencyCode), currencyCode) })}
+              {hasCustomShares
+                ? t('add_expense.custom_split')
+                : t('add_expense.per_person', { amount: formatCurrency(roundCurrency(perPerson, currencyCode), currencyCode) })}
             </Text>
           </View>
         </View>

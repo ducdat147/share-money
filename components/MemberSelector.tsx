@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Member } from '@/utils/types';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { CurrencyCode, formatCurrency, roundCurrency } from '@/utils/currency';
 import UserAvatar from './UserAvatar';
 
 interface MemberSelectorProps {
@@ -14,16 +15,28 @@ interface MemberSelectorProps {
   onSelectAll: () => void;
   onDeselectAll: () => void;
   treasurerId?: string;
-  /** Phần tiền mỗi người đã định dạng; không truyền khi chưa nhập số tiền. */
-  share?: string;
+  /** Phần tiền đã tính của từng người được chọn (khoá hoặc chia đều). */
+  shares: Record<string, number>;
+  /** Chuỗi đang gõ của người bị khoá; có key nghĩa là đang khoá. */
+  shareTexts: Record<string, string>;
+  /** Chuỗi rỗng nghĩa là mở khoá. */
+  onChangeShare: (memberId: string, text: string) => void;
+  currencyCode?: CurrencyCode;
+  /** Vị trí y của dòng vừa focus ô nhập, tính từ đầu component, để màn cha cuộn tới. */
+  onShareFocus?: (offsetY: number) => void;
+  /** Lỗi phần tiền tuỳ chỉnh, hiện thay cho dòng gợi ý bên dưới. */
+  error?: string;
 }
 
 const MemberSelector: React.FC<MemberSelectorProps> = React.memo(
-  ({ members, selected, onToggle, onSelectAll, onDeselectAll, treasurerId, share }) => {
+  ({ members, selected, onToggle, onSelectAll, onDeselectAll, treasurerId, shares, shareTexts, onChangeShare, currencyCode, onShareFocus, error }) => {
     const allSelected = selected.length === members.length;
     const { colors } = useAppTheme();
     const { t } = useTranslation();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const hasLocked = selected.some((id) => shareTexts[id] !== undefined);
+    const listY = useRef(0);
+    const rowYs = useRef<Record<string, number>>({});
 
     return (
       <View style={styles.container}>
@@ -38,14 +51,17 @@ const MemberSelector: React.FC<MemberSelectorProps> = React.memo(
           </TouchableOpacity>
         </View>
 
-        <View style={styles.list}>
+        <View style={styles.list} onLayout={(e) => { listY.current = e.nativeEvent.layout.y; }}>
           {members.map((member, index) => {
             const isSelected = selected.includes(member.id);
+            const isLocked = shareTexts[member.id] !== undefined;
+            const share = shares[member.id] ?? 0;
             return (
               <TouchableOpacity
                 key={member.id}
                 style={[styles.row, index > 0 && styles.rowDivider]}
                 onPress={() => onToggle(member.id)}
+                onLayout={(e) => { rowYs.current[member.id] = e.nativeEvent.layout.y; }}
                 activeOpacity={0.7}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: isSelected }}
@@ -57,9 +73,24 @@ const MemberSelector: React.FC<MemberSelectorProps> = React.memo(
                     <Text style={styles.treasurerBadge}>{t('create_trip.treasurer')}</Text>
                   )}
                 </View>
-                <Text style={[styles.share, !isSelected && styles.shareExcluded]}>
-                  {isSelected ? share : '—'}
-                </Text>
+                {isSelected ? (
+                  <View style={styles.shareField}>
+                    {isLocked && <Ionicons name="lock-closed" size={14} color={colors.text} />}
+                    {/* Ô trống hiện phần chia đều làm placeholder; gõ số là khoá. */}
+                    <TextInput
+                      style={[styles.shareInput, isLocked && styles.shareInputLocked]}
+                      value={shareTexts[member.id] ?? ''}
+                      onChangeText={(text) => onChangeShare(member.id, text)}
+                      onFocus={() => onShareFocus?.(listY.current + (rowYs.current[member.id] ?? 0))}
+                      placeholder={share > 0 ? formatCurrency(roundCurrency(share, currencyCode), currencyCode) : ''}
+                      placeholderTextColor={colors.primaryLight}
+                      keyboardType="numeric"
+                      selectTextOnFocus
+                    />
+                  </View>
+                ) : (
+                  <Text style={[styles.share, styles.shareExcluded]}>—</Text>
+                )}
                 <Ionicons
                   name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
                   size={24}
@@ -70,10 +101,14 @@ const MemberSelector: React.FC<MemberSelectorProps> = React.memo(
           })}
         </View>
 
-        <Text style={[styles.footer, selected.length === 0 && styles.footerWarning]}>
+        <Text style={[styles.footer, (selected.length === 0 || error) && styles.footerWarning]}>
           {selected.length === 0
             ? t('components.select_at_least_one')
-            : t('components.split_equally', { count: selected.length })}
+            : error
+              ? error
+              : hasLocked
+              ? t('components.split_custom_hint')
+              : t('components.split_equally', { count: selected.length })}
         </Text>
       </View>
     );
@@ -155,6 +190,27 @@ const createStyles = (colors: ThemeColors) =>
     },
     shareExcluded: {
       color: colors.textMuted,
+    },
+    shareField: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
+    shareInput: {
+      minWidth: 96,
+      paddingVertical: Spacing.xs,
+      paddingHorizontal: Spacing.sm,
+      borderRadius: BorderRadius.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      textAlign: 'right',
+      fontSize: FontSize.sm,
+      fontWeight: FontWeight.semibold,
+      color: colors.primaryLight,
+    },
+    shareInputLocked: {
+      borderColor: colors.primary,
+      color: colors.text,
     },
     footer: {
       marginTop: Spacing.sm,

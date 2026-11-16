@@ -35,6 +35,7 @@ interface TripStore {
     amount: number,
     participants: string[],
     paidBy?: string,
+    customShares?: Record<string, number>,
   ) => Promise<void>;
   updateExpense: (
     tripId: string,
@@ -43,6 +44,7 @@ interface TripStore {
     amount: number,
     participants: string[],
     paidBy?: string,
+    customShares?: Record<string, number>,
   ) => Promise<void>;
   removeExpense: (tripId: string, expenseId: string) => Promise<void>;
 
@@ -203,14 +205,14 @@ export const useTripStore = create<TripStore>((set, get) => ({
     await get().loadTrip(tripId);
   },
 
-  addExpense: async (tripId, description, amount, participants, paidBy) => {
+  addExpense: async (tripId, description, amount, participants, paidBy, customShares) => {
     const expenseId = Crypto.randomUUID();
-    await db.insertExpense(expenseId, tripId, description, amount, participants, paidBy);
+    await db.insertExpense(expenseId, tripId, description, amount, participants, paidBy, customShares);
     await get().loadTrip(tripId);
   },
 
-  updateExpense: async (tripId, expenseId, description, amount, participants, paidBy) => {
-    await db.updateExpense(expenseId, description, amount, participants, paidBy);
+  updateExpense: async (tripId, expenseId, description, amount, participants, paidBy, customShares) => {
+    await db.updateExpense(expenseId, description, amount, participants, paidBy, customShares);
     await get().loadTrip(tripId);
   },
 
