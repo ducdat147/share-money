@@ -465,7 +465,7 @@ const createStyles = (colors: ThemeColors) =>
     totalAction: { marginTop: Spacing.xs },
     // Chừa chỗ cho FAB để dòng cuối không bị che.
     listContent: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xxl * 3, flexGrow: 1 },
-    emptyTab: { paddingTop: 60, alignItems: 'center' },
+    emptyTab: { paddingTop: Spacing.xxxl * 2, alignItems: 'center' },
     rowCard: {
       backgroundColor: colors.surface, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: colors.border,
       marginBottom: Spacing.sm, overflow: 'hidden',
@@ -475,16 +475,16 @@ const createStyles = (colors: ThemeColors) =>
     paymentAmounts: { flexDirection: 'row', justifyContent: 'space-between' },
     progressRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
     progressBarBg: {
-      flex: 1, height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden',
+      flex: 1, height: Spacing.sm, backgroundColor: colors.border, borderRadius: BorderRadius.sm, overflow: 'hidden',
     },
     progressBarFill: {
-      height: '100%', backgroundColor: colors.primary, borderRadius: 3,
+      height: '100%', backgroundColor: colors.primary, borderRadius: BorderRadius.sm,
     },
     progressBarFull: { backgroundColor: colors.success },
     progressBarEmpty: { backgroundColor: 'transparent' },
     // Quick add payment button
     addPaymentBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 3,
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
       backgroundColor: colors.success, borderRadius: BorderRadius.sm,
       paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
     },

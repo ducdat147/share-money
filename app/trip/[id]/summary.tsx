@@ -343,7 +343,7 @@ export default function SummaryScreen() {
                   ? t('summary.debt', { amount: formatCurrency(owed, trip.currency) })
                   : owed < 0
                     ? t('summary.refund', { amount: formatCurrency(Math.abs(owed), trip.currency) })
-                    : treasurer?.name === s.name ? t('summary.treasurer') : t('summary.even')}
+                    : s.memberId === treasurer?.id ? t('summary.treasurer') : t('summary.even')}
               </AppText>
             </View>
 
