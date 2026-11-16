@@ -62,6 +62,8 @@ export default function BottomSheet({
   // Đọc trong callback cử chỉ, nên để ở ref: config cử chỉ giữ nguyên tham chiếu khi sheet đổi
   // chiều cao hay cha truyền hàm đóng mới mỗi lần render (ví dụ `() => router.back()`).
   const sheetHeight = useRef(0);
+  // Khoảng trống từ mép trên sheet tới vạch giới hạn, đọc trong listener bàn phím.
+  const headroom = useRef(0);
   const closeRef = useRef(onRequestClose);
   useEffect(() => {
     closeRef.current = onRequestClose;
@@ -99,9 +101,13 @@ export default function BottomSheet({
     const subs = [
       // screenY là mép trên bàn phím tính từ đỉnh màn hình; xem MemberDetailModal để biết vì sao
       // không dùng endCoordinates.height.
-      Keyboard.addListener('keyboardDidShow', (e) =>
-        keyboardOffset.setValue(Math.min(0, e.endCoordinates.screenY - Dimensions.get('screen').height)),
-      ),
+      // Chỉ đẩy lên tối đa tới vạch giới hạn, để tay nắm và ô nhập phía trên không trôi khỏi màn
+      // hình; sheet cao thì phần đáy nằm dưới bàn phím. Không đổi sang padding: trên Android đổi
+      // layout làm ô nhập mất focus.
+      Keyboard.addListener('keyboardDidShow', (e) => {
+        const lift = Math.min(0, e.endCoordinates.screenY - Dimensions.get('screen').height);
+        keyboardOffset.setValue(Math.max(lift, -headroom.current));
+      }),
       Keyboard.addListener('keyboardDidHide', () => keyboardOffset.setValue(0)),
     ];
     return () => subs.forEach((s) => s.remove());
@@ -168,7 +174,10 @@ export default function BottomSheet({
               },
             ]}
             onLayout={(e) => {
-              sheetHeight.current = e.nativeEvent.layout.height;
+              const { y, height } = e.nativeEvent.layout;
+              sheetHeight.current = height;
+              // y tính trong lớp né bàn phím, chưa gồm transform; trừ khoảng đệm trên là ra headroom.
+              headroom.current = Math.max(0, y - (insets.top + Spacing.xxxl));
             }}
           >
             <GestureDetector gesture={pan}>
