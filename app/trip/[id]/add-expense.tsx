@@ -186,6 +186,7 @@ export default function AddExpenseScreen() {
   }, [splitOpen]);
 
   const handleClose = useCallback(() => {
+    if (isSubmitting) return;
     if (amountText === initialAmountText) {
       router.back();
       return;
@@ -194,7 +195,7 @@ export default function AddExpenseScreen() {
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('common.discard'), style: 'destructive', onPress: () => router.back() },
     ]);
-  }, [amountText, initialAmountText, router, showDialog, t]);
+  }, [isSubmitting, amountText, initialAmountText, router, showDialog, t]);
 
   const handleDelete = useCallback(() => {
     if (!expenseId) return;

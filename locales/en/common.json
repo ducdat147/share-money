@@ -21,20 +21,13 @@
 	"add_payment": {
 		"amount_label": "Amount",
 		"amount_placeholder": "0",
-		"btn_receive": "Receive fund",
 		"err_fail": "Could not add payment",
 		"err_invalid_amount": "Amount must be greater than 0",
 		"err_no_member": "Please select a payer",
 		"member_label": "Payer",
 		"note_label": "Note (optional)",
 		"note_placeholder": "e.g., Paid in advance",
-		"select_member": "Select member",
-		"submit": "Receive {{amount}}",
-		"submit_empty": "Receive Fund",
-		"submitting": "Adding...",
-		"title": "Receive Fund",
-		"update_btn": "Update",
-		"update_title": "Edit fund payment"
+		"submit_empty": "Receive Fund"
 	},
 	"common": {
 		"about": "About App",
@@ -47,8 +40,8 @@
 		"settings": "Settings",
 		"warning": "Warning",
 		"discard": "Discard",
-		"discard_title": "Discard this expense?",
-		"discard_desc": "The amount you entered will not be saved."
+		"discard_title": "Discard changes?",
+		"discard_desc": "What you entered won't be saved."
 	},
 	"components": {
 		"backspace": "Delete digit",
