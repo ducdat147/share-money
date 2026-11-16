@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect, useMemo, useState } from 'react';
+import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -7,6 +7,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
@@ -40,15 +41,31 @@ export type BottomSheetProps = {
   visible: boolean;
   onRequestClose: () => void;
   children: ReactNode;
+  /**
+   * Mặc định sheet bọc children trong ScrollView để cuộn được khi cao quá giới hạn. Đặt false khi
+   * children tự cuộn (ví dụ có FlatList), tránh lồng danh sách ảo trong ScrollView.
+   */
+  scrollable?: boolean;
 };
 
-export default function BottomSheet({ visible, onRequestClose, children }: BottomSheetProps) {
+export default function BottomSheet({
+  visible,
+  onRequestClose,
+  children,
+  scrollable = true,
+}: BottomSheetProps) {
   const { colors, isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [showModal, setShowModal] = useState(visible);
-  const [sheetHeight, setSheetHeight] = useState(0);
+  // Đọc trong callback cử chỉ, nên để ở ref: config cử chỉ giữ nguyên tham chiếu khi sheet đổi
+  // chiều cao hay cha truyền hàm đóng mới mỗi lần render (ví dụ `() => router.back()`).
+  const sheetHeight = useRef(0);
+  const closeRef = useRef(onRequestClose);
+  useEffect(() => {
+    closeRef.current = onRequestClose;
+  });
   const [hiddenOffset] = useState(() => Dimensions.get('screen').height);
   const [overlayOpacity] = useState(() => new Animated.Value(0));
   const [translateY] = useState(() => new Animated.Value(hiddenOffset));
@@ -95,25 +112,25 @@ export default function BottomSheet({ visible, onRequestClose, children }: Botto
     () => ({
       // Dự án không dùng reanimated: callback chạy trên JS thread.
       disableReanimated: true,
-      // Chỉ nhận cú kéo xuống, để chạm phím và cuộn ngang trong sheet không bị bắt.
+      // Chỉ gắn vào dải tay nắm và chỉ nhận cú kéo xuống, nên nội dung bên dưới cuộn tự do.
       activeOffsetY: 10,
       failOffsetX: [-20, 20],
       onActivate: () => translateY.stopAnimation(),
       onUpdate: (e) => translateY.setValue(Math.max(0, e.translationY)),
       onDeactivate: (e) => {
-        if (e.translationY > sheetHeight * CLOSE_RATIO || e.velocityY > CLOSE_VELOCITY) {
+        if (e.translationY > sheetHeight.current * CLOSE_RATIO || e.velocityY > CLOSE_VELOCITY) {
           // Trượt hẳn xuống rồi mới báo, để route transparentModal (visible luôn true) cũng đóng mượt.
           Animated.timing(translateY, {
             toValue: hiddenOffset,
             duration: CLOSE_DURATION,
             useNativeDriver: true,
-          }).start(() => onRequestClose());
+          }).start(() => closeRef.current());
         } else {
           Animated.timing(translateY, { toValue: 0, duration: CLOSE_DURATION, useNativeDriver: true }).start();
         }
       },
     }),
-    [translateY, sheetHeight, hiddenOffset, onRequestClose],
+    [translateY, hiddenOffset],
   );
   const pan = usePanGesture(panConfig);
 
@@ -135,19 +152,42 @@ export default function BottomSheet({ visible, onRequestClose, children }: Botto
         <Pressable style={StyleSheet.absoluteFill} onPress={onRequestClose}>
           <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]} />
         </Pressable>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <GestureDetector gesture={pan}>
-            <Animated.View
-              style={[
-                styles.sheet,
-                { paddingBottom: Spacing.xl + insets.bottom, transform: [{ translateY: sheetTranslateY }] },
-              ]}
-              onLayout={(e) => setSheetHeight(e.nativeEvent.layout.height)}
-            >
-              <View style={styles.handle} />
-              {children}
-            </Animated.View>
-          </GestureDetector>
+        {/* Khoảng đệm trên giới hạn chiều cao sheet, chừa tai thỏ và một dải nền để bấm đóng. Sheet
+            co lại theo vùng này (kể cả khi iOS chèn chỗ cho bàn phím), phần thừa thì cuộn. */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={[styles.avoider, { paddingTop: insets.top + Spacing.xxxl }]}
+          pointerEvents="box-none"
+        >
+          <Animated.View
+            style={[
+              styles.sheet,
+              {
+                paddingBottom: Spacing.xl + insets.bottom,
+                transform: [{ translateY: sheetTranslateY }],
+              },
+            ]}
+            onLayout={(e) => {
+              sheetHeight.current = e.nativeEvent.layout.height;
+            }}
+          >
+            <GestureDetector gesture={pan}>
+              <View style={styles.handleStrip}>
+                <View style={styles.handle} />
+              </View>
+            </GestureDetector>
+            {scrollable ? (
+              <ScrollView
+                style={styles.body}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {children}
+              </ScrollView>
+            ) : (
+              <View style={styles.body}>{children}</View>
+            )}
+          </Animated.View>
         </KeyboardAvoidingView>
       </GestureHandlerRootView>
     </Modal>
@@ -157,6 +197,9 @@ export default function BottomSheet({ visible, onRequestClose, children }: Botto
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
+      flex: 1,
+    },
+    avoider: {
       flex: 1,
       justifyContent: 'flex-end',
     },
@@ -169,14 +212,20 @@ const createStyles = (colors: ThemeColors) =>
       borderTopLeftRadius: BorderRadius.xl,
       borderTopRightRadius: BorderRadius.xl,
       paddingHorizontal: Spacing.xl,
-      paddingTop: Spacing.sm,
+      flexShrink: 1,
+    },
+    handleStrip: {
+      alignItems: 'center',
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.lg,
+    },
+    body: {
+      flexShrink: 1,
     },
     handle: {
-      alignSelf: 'center',
       width: 40,
       height: 4,
       borderRadius: BorderRadius.full,
       backgroundColor: colors.textMuted,
-      marginBottom: Spacing.lg,
     },
   });
