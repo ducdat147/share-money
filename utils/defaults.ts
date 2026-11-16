@@ -24,6 +24,17 @@ export function fillMemberNames(names: string[], placeholder: (n: number) => str
   return names.map((name, index) => name.trim() || placeholder(index + 1));
 }
 
+/** First name that repeats an earlier one (trimmed, case-insensitive); undefined when all are distinct. */
+export function findDuplicateName(names: string[]): string | undefined {
+  const seen = new Set<string>();
+  for (const name of names) {
+    const key = name.trim().toLowerCase();
+    if (seen.has(key)) return name.trim();
+    seen.add(key);
+  }
+  return undefined;
+}
+
 /** Expense description from a local-time `HH:mm` stamp. */
 export function autoExpenseDescription(date: Date, label: (time: string) => string): string {
   const hh = String(date.getHours()).padStart(2, '0');

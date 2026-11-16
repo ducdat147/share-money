@@ -9,7 +9,7 @@ import KeyboardAvoidingView from '@/components/KeyboardAvoidingView';
 import { AppText, Button, SegmentedControl, Stepper } from '@/components/ui';
 import { useDialog } from '@/components/DialogProvider';
 import { useTranslation } from 'react-i18next';
-import { fillMemberNames } from '@/utils/defaults';
+import { fillMemberNames, findDuplicateName } from '@/utils/defaults';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
 
 type Currency = 'VND' | 'USD';
@@ -59,9 +59,14 @@ export default function CreateTripScreen() {
       return;
     }
 
+    const members = fillMemberNames(names, (n) => t('create_trip.member_placeholder', { n }));
+    if (findDuplicateName(members)) {
+      showDialog(t('common.error'), t('trip_detail.err_member_exists'));
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const members = fillMemberNames(names, (n) => t('create_trip.member_placeholder', { n }));
       const tripId = await createTrip(name, members, undefined, currency);
 
       if (tripId) {
