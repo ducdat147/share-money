@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,10 @@ import {
   Platform,
   Animated,
   Pressable,
+  Keyboard,
+  Dimensions,
 } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { Member } from '@/utils/types';
 import { useAppTheme } from '@/hooks/useAppTheme';
@@ -18,6 +21,13 @@ import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { CurrencyCode, parseAmountInput } from '@/utils/currency';
 import UserAvatar from './UserAvatar';
+
+// Bản build bật edge-to-edge nên cửa sổ Dialog của Modal không co lại khi bàn phím mở
+// (adjustResize mất tác dụng), sheet nằm dưới bàn phím. Expo Go tắt edge-to-edge, cửa sổ tự co,
+// nên chỉ tự đẩy sheet lên ở bản build.
+const liftForKeyboard =
+  Platform.OS === 'android' &&
+  Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
 
 interface MemberDetailModalProps {
   visible: boolean;
@@ -49,17 +59,32 @@ export default function MemberDetailModal({
   const { t } = useTranslation();
   const styles = createStyles(colors);
 
-  const [name, setName] = useState('');
+  const [name, setName] = useState(member?.name ?? '');
   const [fundAmount, setFundAmount] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showModal, setShowModal] = useState(visible);
 
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const contentTranslateY = useRef(new Animated.Value(400)).current;
+  const [overlayOpacity] = useState(() => new Animated.Value(0));
+  const [contentTranslateY] = useState(() => new Animated.Value(400));
+  const [keyboardOffset] = useState(() => new Animated.Value(0));
+  // Dùng transform để không đổi layout: đổi padding/height trên Android làm ô nhập mất focus.
+  const [sheetTranslateY] = useState(() => Animated.add(contentTranslateY, keyboardOffset));
+
+  // Mount Modal ngay khi mở; effect bên dưới chạy animation, đóng xong mới unmount.
+  if (visible && !showModal) setShowModal(true);
+
+  // Đổi thành viên, hoặc store nạp lại thành viên này, thì điền lại form.
+  const [prevMember, setPrevMember] = useState(member);
+  if (member !== prevMember) {
+    setPrevMember(member);
+    if (member) {
+      setName(member.name);
+      setFundAmount('');
+    }
+  }
 
   useEffect(() => {
     if (visible) {
-      setShowModal(true);
       Animated.parallel([
         Animated.timing(overlayOpacity, {
           toValue: 1,
@@ -89,18 +114,25 @@ export default function MemberDetailModal({
         setShowModal(false);
       });
     }
-  }, [visible]);
+  }, [visible, overlayOpacity, contentTranslateY]);
+
+  useEffect(() => {
+    if (!liftForKeyboard) return;
+    const subs = [
+      // Không dùng endCoordinates.height: Android trừ chiều cao thanh điều hướng khỏi số đó, mà
+      // Dialog edge-to-edge kéo tới tận đáy màn hình, nên sheet thiếu đúng phần đó và che nút Lưu.
+      // screenY là mép trên bàn phím tính từ đỉnh màn hình.
+      Keyboard.addListener('keyboardDidShow', (e) =>
+        keyboardOffset.setValue(Math.min(0, e.endCoordinates.screenY - Dimensions.get('screen').height)),
+      ),
+      Keyboard.addListener('keyboardDidHide', () => keyboardOffset.setValue(0)),
+    ];
+    return () => subs.forEach((s) => s.remove());
+  }, [keyboardOffset]);
 
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
-
-  useEffect(() => {
-    if (member) {
-      setName(member.name);
-      setFundAmount('');
-    }
-  }, [member]);
 
   const handleSave = async () => {
     if (!member) return;
@@ -130,10 +162,10 @@ export default function MemberDetailModal({
           <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]} />
         </Pressable>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardView}
         >
-          <Animated.View style={[styles.content, { transform: [{ translateY: contentTranslateY }] }]}>
+          <Animated.View style={[styles.content, { transform: [{ translateY: sheetTranslateY }] }]}>
             <View style={styles.header}>
               <Text style={styles.title}>{t('member_detail.title')}</Text>
               <TouchableOpacity onPress={handleClose}>

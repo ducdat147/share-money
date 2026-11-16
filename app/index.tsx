@@ -27,7 +27,7 @@ import ScalePressable from '@/components/ScalePressable';
 import * as Haptics from 'expo-haptics';
 
 const AnimatedListItem = ({ children, index }: { children: React.ReactNode; index: number }) => {
-  const animatedValue = React.useRef(new Animated.Value(0)).current;
+  const [animatedValue] = React.useState(() => new Animated.Value(0));
 
   React.useEffect(() => {
     Animated.timing(animatedValue, {
@@ -37,7 +37,7 @@ const AnimatedListItem = ({ children, index }: { children: React.ReactNode; inde
       delay: Math.min(index, 5) * 100,
       useNativeDriver: true,
     }).start();
-  }, [index]);
+  }, [animatedValue, index]);
 
   const translateY = animatedValue.interpolate({
     inputRange: [0, 1],

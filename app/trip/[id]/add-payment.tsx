@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
   Platform, Modal, FlatList,
@@ -34,22 +34,19 @@ export default function AddPaymentScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const trip = useMemo(() => trips.find((t) => t.id === id), [trips, id]);
 
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(preselectedMemberId ?? null);
-  const [amountText, setAmountText] = useState('');
-  const [note, setNote] = useState('');
+  // Màn sửa: chỉ dùng để điền sẵn form ở lần render đầu.
+  const existingPayment = useMemo(
+    () => (paymentId ? trip?.payments.find((p) => p.id === paymentId) : undefined),
+    [paymentId, trip],
+  );
+
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(
+    existingPayment?.memberId ?? preselectedMemberId ?? null,
+  );
+  const [amountText, setAmountText] = useState(existingPayment?.amount.toString() ?? '');
+  const [note, setNote] = useState(existingPayment?.note ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-
-  useEffect(() => {
-    if (paymentId && trip) {
-      const existingPayment = trip.payments.find((p) => p.id === paymentId);
-      if (existingPayment) {
-        setSelectedMemberId(existingPayment.memberId);
-        setAmountText(existingPayment.amount.toString());
-        setNote(existingPayment.note ?? '');
-      }
-    }
-  }, [paymentId, trip]);
 
   const amount = useMemo(
     () => parseAmountInput(amountText, trip?.currency),

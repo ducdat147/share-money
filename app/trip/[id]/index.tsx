@@ -46,11 +46,9 @@ export default function TripDetailScreen() {
   }, [id, loadTrip]);
 
   // Handle automatic tab switching if treasurer is removed while on payments tab
-  useEffect(() => {
-    if (activeTab === 'payments' && trip && !trip.treasurerId) {
-      setActiveTab('expenses');
-    }
-  }, [trip?.treasurerId, activeTab]);
+  if (activeTab === 'payments' && trip && !trip.treasurerId) {
+    setActiveTab('expenses');
+  }
 
   const treasurer = useMemo(() => trip?.members.find((m) => m.id === trip.treasurerId), [trip]);
   const totalExpenses = useMemo(() => (trip ? getTotalExpenses(trip.expenses) : 0), [trip]);
@@ -395,7 +393,7 @@ export default function TripDetailScreen() {
                   <Ionicons name="add-circle" size={36} color={newMemberName.trim() ? colors.primary : colors.textMuted} />
                 </TouchableOpacity>
               </View>
-            ) : null
+            ) : undefined
           }
         />
       )}

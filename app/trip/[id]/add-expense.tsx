@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
   Platform, Modal, FlatList,
@@ -30,28 +30,22 @@ export default function AddExpenseScreen() {
   const trip = useMemo(() => trips.find((t) => t.id === id), [trips, id]);
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const [description, setDescription] = useState('');
-  const [amountText, setAmountText] = useState('');
+  // Màn sửa: chỉ dùng để điền sẵn form ở lần render đầu.
+  const existingExpense = useMemo(
+    () => (expenseId ? trip?.expenses.find((e) => e.id === expenseId) : undefined),
+    [expenseId, trip],
+  );
+
+  const [description, setDescription] = useState(existingExpense?.description ?? '');
+  const [amountText, setAmountText] = useState(existingExpense?.amount.toString() ?? '');
   const [selectedMembers, setSelectedMembers] = useState<string[]>(
-    trip?.members.map((m) => m.id) ?? [],
+    existingExpense?.participants ?? trip?.members.map((m) => m.id) ?? [],
   );
   const [paidBy, setPaidBy] = useState<string | undefined>(
-    trip?.treasurerId ?? trip?.members[0]?.id,
+    existingExpense?.paidBy || (trip?.treasurerId ?? trip?.members[0]?.id),
   );
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (expenseId && trip) {
-      const existingExpense = trip.expenses.find((e) => e.id === expenseId);
-      if (existingExpense) {
-        setDescription(existingExpense.description);
-        setAmountText(existingExpense.amount.toString());
-        setSelectedMembers(existingExpense.participants);
-        if (existingExpense.paidBy) setPaidBy(existingExpense.paidBy);
-      }
-    }
-  }, [expenseId, trip]);
 
   const amount = useMemo(
     () => parseAmountInput(amountText, trip?.currency),
@@ -223,7 +217,7 @@ export default function AddExpenseScreen() {
             </View>
             <FlatList
               data={trip.members}
-              keyExtractor={(item: { id: string }) => item.id}
+              keyExtractor={(item) => item.id}
               showsVerticalScrollIndicator={false}
               renderItem={({ item }: { item: { id: string; name: string } }) => (
                 <TouchableOpacity

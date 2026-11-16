@@ -31,19 +31,19 @@ export default function SummaryScreen() {
   const [showModal, setShowModal] = useState(false);
 
   const [strategy, setStrategy] = useState<SettlementStrategy>('optimal');
-  const [centralMemberId, setCentralMemberId] = useState<string | undefined>(undefined);
+  const [pickedCentralId, setPickedCentralId] = useState<string | undefined>(undefined);
   const viewShotRef = useRef<ViewShotRef>(null);
 
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const modalTranslateY = useRef(new Animated.Value(600)).current;
+  const [overlayOpacity] = useState(() => new Animated.Value(0));
+  const [modalTranslateY] = useState(() => new Animated.Value(600));
 
   const trip = useMemo(() => trips.find((t) => t.id === id), [trips, id]);
 
-  useEffect(() => {
-    if (trip && !centralMemberId) {
-      setCentralMemberId(trip.treasurerId || trip.members[0]?.id);
-    }
-  }, [trip, centralMemberId]);
+  // Chưa chọn ai làm trung gian thì mặc định là thủ quỹ, không có thủ quỹ thì lấy thành viên đầu tiên.
+  const centralMemberId = pickedCentralId || trip?.treasurerId || trip?.members[0]?.id;
+
+  // Mount Modal ngay khi chọn thành viên; effect bên dưới chạy animation, đóng xong mới unmount.
+  if (selectedSummary && !showModal) setShowModal(true);
 
   const handleShare = async () => {
     try {
@@ -62,7 +62,6 @@ export default function SummaryScreen() {
 
   useEffect(() => {
     if (selectedSummary) {
-      setShowModal(true);
       Animated.parallel([
         Animated.timing(overlayOpacity, {
           toValue: 1,
@@ -92,7 +91,7 @@ export default function SummaryScreen() {
         setShowModal(false);
       });
     }
-  }, [selectedSummary]);
+  }, [selectedSummary, overlayOpacity, modalTranslateY]);
 
   useEffect(() => {
     (async () => { if (id) { await loadTrip(id); setIsLoading(false); } })();
@@ -237,7 +236,7 @@ export default function SummaryScreen() {
                   <TouchableOpacity
                     key={m.id}
                     style={[styles.memberChip, centralMemberId === m.id && styles.memberChipActive]}
-                    onPress={() => setCentralMemberId(m.id)}
+                    onPress={() => setPickedCentralId(m.id)}
                   >
                     <Text style={[styles.memberChipText, centralMemberId === m.id && styles.memberChipTextActive]}>
                       {m.name}

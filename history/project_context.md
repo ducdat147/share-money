@@ -82,6 +82,31 @@ Khoản chi trả từ quỹ, paid_by NULL           -> sum(balances) = -120.000
 
 ---
 
+## 📅 Cập Nhật (24-10-2026) — Nâng từ SDK 57 lên SDK 58
+
+Expo Go mới chỉ mở được app SDK 58. Dự án giờ chạy Expo 58.0.19, React Native 0.88.0 và React 19.3.0. Các gói còn lại được căn bằng `npx expo install --fix`.
+
+* Chạy Expo CLI bằng Node 22 (`PATH=/usr/local/bin:$PATH`). SDK 58 chỉ hỗ trợ Node 22.13+, 24.3+ hoặc 26+. Node 25 mặc định của máy nằm ngoài dải này.
+* Jest 30 kéo theo `@parcel/watcher`, một gói có script install. `strictDepBuilds` chặn nó thành lỗi cài đặt. [pnpm-workspace.yaml](../pnpm-workspace.yaml) đặt `'@parcel/watcher': false`, vì gói đã có binary dựng sẵn. Script kia chỉ build từ nguồn khi bật `npm_config_build_from_source`.
+* pnpm 11 từ chối các bản phát hành quá mới. 18 gói SDK 58 lúc đó chưa đủ tuổi. pnpm tự ghi chúng vào `minimumReleaseAgeExclude`, kèm version cụ thể. Khi các bản này đủ tuổi, có thể bỏ danh sách đi.
+* Strict TypeScript API của RN 0.88 bắt hai lỗi kiểu. `ListHeaderComponent` không nhận `null` nữa, phải dùng `undefined`. Annotation tay trên `keyExtractor` làm FlatList suy sai kiểu item. Cứ để TS suy từ `data`.
+* RNGH lên 3.3. [SwipeBack.tsx](../components/SwipeBack.tsx) và [TripCard.tsx](../components/TripCard.tsx) đã chuyển từ `Gesture.Pan()` sang hook `usePanGesture`. `onStart` đổi thành `onActivate`, `onEnd` thành `onDeactivate`, ngữ nghĩa giữ nguyên. Config đặt `disableReanimated: true`, nên callback luôn chạy trên JS thread, kể cả khi Expo Go có sẵn reanimated. Hook so config theo tham chiếu, vì vậy config phải bọc trong `useMemo`.
+* `ThemeProvider`, `DarkTheme` và `DefaultTheme` giờ import thẳng từ `expo-router`. Lối `expo-router/react-navigation` vẫn chạy, nhưng SDK 58 đã đưa ba export này ra gói gốc. Hướng dẫn migrate Router không có mục nào khác chạm tới app. Mọi href đều đã đủ `id`, và `navigation.goBack` vẫn là closure nên truyền rời vào `SwipeBack` được.
+* `react-native-view-shot` lên 6, `ref.current.capture()` vẫn giữ nguyên. `react-native-webview` lên 14. App không import nó trực tiếp.
+* Release build Android giờ bật R8 mặc định. Thư viện dùng reflection có thể cần keep rule qua `expo-build-properties`. Chưa build APK để kiểm.
+* Đã sửa hết 33 lỗi lint cũ từ SDK 57.
+  * `react-hooks/refs`: `Animated.Value` chuyển từ `useRef(...).current` sang `useState(() => ...)`.
+  * `react-hooks/set-state-in-effect`: form sửa chi tiêu và đóng quỹ lấy giá trị đầu ngay trong `useState`. Tâm điểm tất toán ở Tổng kết giờ là giá trị suy ra, state chỉ giữ lựa chọn của người dùng. Hai sheet (`summary`, `MemberDetailModal`) bật `showModal` ngay lúc render. `RenameTripDialog`, `MemberDetailModal` và tab ở màn chi tiết so với giá trị lần render trước, theo mẫu "adjusting state when a prop changes" của React.
+  * Còn 7 cảnh báo `exhaustive-deps`/`import` có từ trước, chưa đụng.
+* Typecheck sạch, `expo-doctor` qua 20/20. `expo export --platform android` bundle thành công.
+* Sau đó một lần `pnpm update` làm app crash ngay khi mở trong Expo Go. Lệnh này đổi mọi range `~`/chính xác thành `^` và kéo RNGH lên 3.4.0, React lên 19.3.1. RNGH 3.4 gọi `RNGestureHandlerModule.getModuleId()` ngay trong `GestureHandlerRootView` trên Android. Native 3.3 đóng gói trong Expo Go 58 không có method này.
+  * Đã đưa React về 19.3.0 và RNGH về `~3.3.0` bằng `npx expo install --fix`.
+  * pnpm giữ tiền tố cũ của gói đã có trong `package.json`, nên `expo install` vẫn ghi `^`. Range của mọi gói có trong `bundledNativeModules.json` đã được sửa tay về đúng dạng Expo chốt.
+  * **Đừng chạy `pnpm update`.** Nâng gói Expo bằng `npx expo install`.
+* Chưa chạy trên thiết bị thật.
+
+---
+
 ## 📅 Cập Nhật (22-10-2026) — Status bar đen trong Expo Go
 
 Trên Expo Go 57.0.9 (Galaxy Note 20 Ultra, Android 13), status bar là một dải đen đặc. App bị đẩy xuống ngay dưới dải đó. Icon tối nằm trên nền đen nên gần như không thấy.
