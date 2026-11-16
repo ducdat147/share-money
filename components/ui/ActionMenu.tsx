@@ -58,7 +58,9 @@ export default function ActionMenu({ items }: ActionMenuProps) {
                 style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
                 onPress={() => {
                   setOpen(false);
-                  item.onPress();
+                  // Đợi Modal đóng hẳn: iOS bỏ qua Modal mới (ví dụ hộp thoại xác nhận) nếu
+                  // nó mở lúc Modal này còn đang tắt. Cùng cách với DialogProvider.
+                  setTimeout(item.onPress, 150);
                 }}
                 accessibilityRole="menuitem"
               >
@@ -89,7 +91,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingVertical: Spacing.xs,
       backgroundColor: colors.surface,
       borderRadius: BorderRadius.md,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderWidth: 1,
       borderColor: colors.border,
       elevation: 8,
       shadowColor: colors.overlay,
