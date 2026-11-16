@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Pressable, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
 
 interface Props {
   visible: boolean;
@@ -22,9 +22,12 @@ export default function RenameTripDialog({ visible, initialName, onCancel, onSav
   const [name, setName] = useState(initialName);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
+  // Mỗi lần mở hộp thì điền lại tên hiện tại.
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) setName(initialName);
-  }, [visible, initialName]);
+  }
 
   const trimmed = name.trim();
   const canSave = !!trimmed && trimmed !== initialName && !isSaving;
@@ -99,7 +102,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     title: {
       fontSize: FontSize.lg,
-      fontWeight: FontWeight.bold,
+      fontFamily: FontFamily.bold,
       color: colors.text,
       marginBottom: Spacing.md,
     },
@@ -111,6 +114,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: Spacing.md,
       paddingVertical: Spacing.md,
       fontSize: FontSize.md,
+      fontFamily: FontFamily.regular,
       color: colors.text,
       marginBottom: Spacing.xl,
     },
@@ -136,7 +140,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     buttonText: {
       fontSize: FontSize.md,
-      fontWeight: FontWeight.semibold,
+      fontFamily: FontFamily.semibold,
     },
     cancelText: {
       color: colors.textSecondary,

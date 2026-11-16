@@ -1,19 +1,32 @@
 import React, { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, ThemeProvider, DarkTheme, DefaultTheme } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
 import * as SystemUI from 'expo-system-ui';
 import { AppState, Keyboard, Platform } from 'react-native';
-import { ThemeProvider, DarkTheme, DefaultTheme } from 'expo-router/react-navigation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useThemeStore } from '@/hooks/useThemeStore';
 import { DialogProvider } from '@/components/DialogProvider';
 import SwipeBack from '@/components/SwipeBack';
 import '@/utils/i18n';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-google-fonts/lexend';
+
+SplashScreen.preventAutoHideAsync();
+
+// Route chỉ chứa một BottomSheet: màn phía sau vẫn hiện, sheet tự trượt nên tắt hoạt ảnh chuyển màn.
+// contentStyle mặc định tô nền đặc, nên ghi đè thành trong suốt.
+const sheetRouteOptions = {
+  presentation: 'transparentModal',
+  animation: 'none',
+  contentStyle: { backgroundColor: 'transparent' },
+} as const;
 
 export default function RootLayout() {
   const { colors, isDark } = useAppTheme();
+  const [fontsLoaded, fontError] = useFonts({ Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold });
   const loadTheme = useThemeStore((s) => s.loadTheme);
 
   useEffect(() => {
@@ -49,6 +62,13 @@ export default function RootLayout() {
     StatusBar.setStyle(isDark ? 'light' : 'dark');
   }, [isDark]);
 
+  // Lỗi nạp font vẫn mở app (rơi về font hệ thống) thay vì kẹt ở splash.
+  const fontsReady = fontsLoaded || !!fontError;
+
+  useEffect(() => {
+    if (fontsReady) SplashScreen.hideAsync();
+  }, [fontsReady]);
+
   const navTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),
     colors: {
@@ -60,6 +80,8 @@ export default function RootLayout() {
       primary: colors.primary,
     },
   };
+
+  if (!fontsReady) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -103,15 +125,11 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="trip/[id]/add-expense"
-            options={{
-              presentation: 'modal',
-            }}
+            options={sheetRouteOptions}
           />
           <Stack.Screen
             name="trip/[id]/add-payment"
-            options={{
-              presentation: 'modal',
-            }}
+            options={sheetRouteOptions}
           />
           <Stack.Screen
             name="trip/[id]/summary"

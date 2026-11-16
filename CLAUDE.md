@@ -4,14 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Share Money — an offline-first Expo/React Native app (SDK 57, React Native 0.86, New Architecture, Expo Router 57) that splits trip expenses among a group and computes who-owes-whom settlements. All data lives in on-device SQLite; there is no backend.
+Share Money — an offline-first Expo/React Native app (SDK 58, React Native 0.88, New Architecture, Expo Router 58) that splits trip expenses among a group and computes who-owes-whom settlements. All data lives in on-device SQLite; there is no backend.
 
 ## Commands
 
-Package manager is **pnpm 11**, pinned via the `packageManager` field in `package.json` (Corepack enforces it; pnpm 11 needs Node 22+). All pnpm settings live in `pnpm-workspace.yaml` — pnpm 11 reads only auth/registry settings from `.npmrc`, so that file is gone. Two settings matter:
+Package manager is **pnpm 11**, pinned via the `packageManager` field in `package.json` (Corepack enforces it; pnpm 11 needs Node 22+). Expo SDK 58 supports only Node 22.13+, 24.3+ or 26+ — odd releases like 25 are unsupported. All pnpm settings live in `pnpm-workspace.yaml` — pnpm 11 reads only auth/registry settings from `.npmrc`, so that file is gone. Two settings matter:
 
 - `nodeLinker: hoisted` — required so native C++ builds don't hit the Windows 260-char path limit; do not switch to the default isolated linker.
-- `allowBuilds` — pnpm blocks dependency build scripts by default and `strictDepBuilds` makes an unapproved one a hard install error, so any new dependency with a postinstall must be added here (`unrs-resolver` is the precedent).
+- `allowBuilds` — pnpm blocks dependency build scripts by default and `strictDepBuilds` makes an unapproved one a hard install error, so any new dependency with a postinstall must be added here (`unrs-resolver` is the precedent for `true`, `@parcel/watcher` for `false`).
+
+Upgrade Expo-managed packages with `npx expo install <pkg>` or `npx expo install --fix`, never `pnpm update`. `pnpm update` rewrites the `~`/exact ranges Expo writes into `^` and pulls native modules past the versions Expo Go bundles — RNGH 3.4 JS calls `getModuleId()`, which Expo Go 58's native 3.3 lacks, so the app crashes on launch. Once a range is `^`, pnpm keeps that prefix even when `expo install` re-adds the package, so fix the range in `package.json` by hand.
 
 ```bash
 pnpm install
@@ -22,7 +24,7 @@ npx jest path/to/file.test.ts -t "case name"   # single test / single case
 npx tsc --noEmit           # typecheck (strict mode is on)
 ```
 
-There are currently **no test files**; `scratch/test.ts` is an ad-hoc script, not a Jest test.
+The only Jest suite is [utils/__tests__/calculator.test.ts](utils/__tests__/calculator.test.ts); run it without watch mode via `npx jest utils/__tests__/calculator.test.ts`. Test files import `expect`/`test` from `@jest/globals` because `tsc` does not pick up the `@types/jest` globals under `expo/tsconfig.base`. `scratch/test.ts` is an ad-hoc script, not a Jest test.
 
 Builds (`android/` and `ios/` are gitignored — Continuous Native Generation):
 
@@ -52,7 +54,7 @@ Screens read `trips` from the store and derive their trip with `useMemo(() => tr
 
 Three distinct money flows, and mixing them up is the main source of bugs:
 
-- **Share** — an expense is split equally across `expense.participants`; each participant owes `amount / participants.length`.
+- **Share** — what each of `expense.participants` owes. `expense.customShares` (stored as the nullable `expense_participants.share` column) holds the locked amounts; everyone else splits `amount - sum(locked)` equally. `getExpenseShares` is the single place that computes this — never divide `amount / participants.length` directly. `getCustomSharesError` is the form's validation for locked shares.
 - **Fund payment** — a `Payment` row: cash handed to the treasurer up front.
 - **Advanced payment** — `expense.paidBy` is a non-treasurer member: that member paid a vendor directly out of pocket.
 
@@ -72,14 +74,16 @@ Currency is **per-trip** (`trip.currency`, `'VND' | 'USD'`), not global; VND has
 
 ### Routing
 
-File-based via Expo Router with `typedRoutes` enabled. Never import `@react-navigation/*` — since SDK 56 expo-router rejects it; use `expo-router/react-navigation`. `app/_layout.tsx` registers every screen with `headerShown: false`; screens render `components/CustomHeader` themselves. `trip/create`, `trip/[id]/add-expense`, and `trip/[id]/add-payment` are `presentation: 'modal'`. Providers (`GestureHandlerRootView` → navigation `ThemeProvider` → `DialogProvider`) and the `@/utils/i18n` side-effect import all live in the root layout.
+File-based via Expo Router with `typedRoutes` enabled. Never import `@react-navigation/*` — since SDK 56 expo-router rejects it. `ThemeProvider`, `DarkTheme` and `DefaultTheme` come from `expo-router` itself (SDK 58+); reach for `expo-router/react-navigation` only for APIs the root entry doesn't export. `app/_layout.tsx` registers every screen with `headerShown: false`; screens render `components/CustomHeader` themselves. `trip/create` is `presentation: 'modal'`; `trip/[id]/add-expense` and `trip/[id]/add-payment` are `transparentModal` (shared `sheetRouteOptions`, `animation: 'none'`) and render a `BottomSheet` themselves, so the trip screen stays visible behind them. Providers (`GestureHandlerRootView` → navigation `ThemeProvider` → `DialogProvider`) and the `@/utils/i18n` side-effect import all live in the root layout.
 
 ## Conventions
 
-- **Styling**: no hardcoded colors or spacing. Every component defines `createStyles(colors: ThemeColors)` returning `StyleSheet.create({...})` and calls it via `const styles = useMemo(() => createStyles(colors), [colors])` with `colors` from `useAppTheme()`. Tokens (`Spacing`, `BorderRadius`, `FontSize`, `FontWeight`, `LightColors`/`DarkColors`) come from [constants/theme.ts](constants/theme.ts). Theme mode is `system | light | dark`, persisted in AsyncStorage by `useThemeStore`.
+- **Styling**: no hardcoded colors or spacing. Every component defines `createStyles(colors: ThemeColors)` returning `StyleSheet.create({...})` and calls it via `const styles = useMemo(() => createStyles(colors), [colors])` with `colors` from `useAppTheme()`. Tokens (`Spacing`, `BorderRadius`, `FontSize`, `FontWeight`, `FontFamily`, `LightColors`/`DarkColors`) come from [constants/theme.ts](constants/theme.ts). Theme mode is `system | light | dark`, persisted in AsyncStorage by `useThemeStore`.
+- **UI kit**: shared building blocks live in `components/ui/` (import from `@/components/ui`): `AppText`, `Button`, `Card`, `SegmentedControl`, `Stepper`, `FAB`, `ActionMenu`, `ListRow`, `BottomSheet`, `NumPad`. Render text with `AppText` (variants, `weight`: `regular | semibold | bold`, `numeric` for money) — it picks the Lexend file from `FontFamily`; never set `fontWeight` on it, Android can't choose a font file by weight. Quick-entry flows use `BottomSheet` (Animated + RNGH pan on the handle; route sheets pass `visible` always true and `onRequestClose={() => router.back()}`) with `NumPad`, which doesn't render the amount: the screen shows `formatCurrency(parseAmountInput(value, currency), currency)` above it. `ListRow` has no delete affordance; deletion lives in the edit sheets (expense, payment) and `MemberDetailModal`.
 - **Dialogs**: use `useDialog().showDialog(title, message, buttons)` from [components/DialogProvider.tsx](components/DialogProvider.tsx). React Native's `Alert` is deliberately unused — the custom dialog is themed and works consistently on both platforms.
-- **Animations**: standard React Native `Animated` only. `react-native-reanimated` was removed after `installTurboModule` crashes on RN 0.81 + New Architecture; do not reintroduce it. (This overrides the "use reanimated" line in `.agents/rules/senior-react-native.md`.)
-- **i18n**: all user-facing strings go through `useTranslation()`/`t()`. `locales/en.json` and `locales/vi.json` must be kept in sync — key namespaces mirror screens (`home`, `trip_detail`, `add_expense`, `summary`, `components`, `common`). Language is auto-detected from the device and persisted in AsyncStorage.
+- **Animations**: standard React Native `Animated` only. `react-native-reanimated` was removed after `installTurboModule` crashes on RN 0.81 + New Architecture; do not reintroduce it. (This overrides the "use reanimated" line in `.agents/rules/senior-react-native.md`.) Hold an `Animated.Value` in `useState(() => new Animated.Value(x))`, not `useRef(...).current` — the `react-hooks/refs` lint rule rejects reading a ref during render.
+- **Gestures**: RNGH 3 hook API (`usePanGesture` + `GestureDetector`), not the legacy `Gesture.Pan()` builder. Pass `disableReanimated: true` so callbacks run on the JS thread, and memoize the config object — the hook re-sends it to native whenever its identity changes.
+- **i18n**: all user-facing strings go through `useTranslation()`/`t()`. `locales/<lang>/common.json` (`en`, `fr`, `vi`) must be kept in sync — key namespaces mirror screens (`home`, `trip_detail`, `add_expense`, `summary`, `components`, `common`). Language is auto-detected from the device and persisted in AsyncStorage.
 - **IDs**: `Crypto.randomUUID()` from `expo-crypto`, generated in the store, not in the DB layer.
 - **Lists**: `FlatList` with `keyExtractor`, never `ScrollView` + `.map()`. Memoize derived values and callbacks (`useMemo`/`useCallback`) — screens re-render whenever the store's `trips` array changes.
 

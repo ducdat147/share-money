@@ -82,6 +82,68 @@ Khoản chi trả từ quỹ, paid_by NULL           -> sum(balances) = -120.000
 
 ---
 
+## 📅 Cập Nhật (16-11-2026) — Làm lại giao diện: bộ G, bảng trượt nhập nhanh, tổng kết "ai trả ai"
+
+Chủ app thấy giao diện cũ chưa thân thiện. Mục tiêu số một là nhập nhanh: ngồi quán ghi một khoản chi xong trong vài giây. Mọi chức năng và cách tính tiền giữ nguyên, [calculator.ts](../utils/calculator.ts) và schema SQLite không đổi. Spec ở `docs/superpowers/specs/2026-11-16-ui-ux-redesign-design.md`. Nhánh `feat/ui-redesign`.
+
+* Phong cách G, "Ô liu & cát". Primary `#4D7C0F` (sáng) và `#A3E635` (tối), nền cát `#F5F3EC` và `#14140F`. Giữ nguyên tên token trong [theme.ts](../constants/theme.ts), chỉ đổi giá trị. Bo góc mặc định 12, thẻ có viền 1px, không đổ bóng. `success` (được nhận) và `danger` (phải trả) đạt tương phản 4.5:1 trên `surface` ở cả hai chế độ.
+* Font Lexend nạp bằng `useFonts` trong `app/_layout.tsx`, splash giữ tới khi xong. Android không chọn được file font bằng `fontWeight`, nên có token `FontFamily` và `AppText` chọn file theo `weight`. Đừng đặt `fontWeight` lên `AppText`. Số tiền luôn có `numeric` để cột thẳng hàng.
+* Bộ dùng chung nằm ở `components/ui/`: `AppText`, `Button`, `Card`, `SegmentedControl`, `Stepper`, `FAB`, `ActionMenu`, `ListRow`, `BottomSheet`, `NumPad`. `BottomSheet` tự dựng bằng `Animated` và RNGH `usePanGesture`, kéo ở thanh tay nắm. Không dùng `@gorhom/bottom-sheet` vì nó kéo theo reanimated.
+* Nhập chi tiêu và đóng quỹ giờ là bảng trượt từ đáy. Hai route `add-expense`, `add-payment` đổi từ `modal` sang `transparentModal` để màn chuyến đi vẫn hiện phía sau. Mở ra là thấy số tiền lớn và `NumPad` (VND có phím `000`, USD có dấu thập phân). `NumPad` không tự vẽ số; màn hình vẽ bằng `formatCurrency(parseAmountInput(...))`.
+* Hai thay đổi có chủ đích ở bảng chi tiêu. Mô tả để trống thì lưu "Chi tiêu HH:mm", trước đây bắt buộc. Người trả mặc định là người trả khoản chi mới nhất, rồi tới thủ quỹ, rồi người đầu tiên; trước đây luôn là thủ quỹ. Logic nằm ở [defaults.ts](../utils/defaults.ts), có test.
+* Phần "Chia cho" thu gọn thành "Cả nhóm (N)". Mở ra thì `NumPad` thu lại, `MemberSelector` và ô số tiền riêng (`customShares`) dùng nguyên như cũ.
+* Thùng rác trên từng dòng bị bỏ. Xoá chi tiêu và đóng quỹ nằm ở đáy bảng sửa, xoá thành viên nằm trong `MemberDetailModal`. Hộp thoại xác nhận và điều kiện chặn xoá (thủ quỹ...) giữ như cũ. `ListRow` cố ý không có nút xoá.
+* Trang chủ xếp chuyến đang đi lên trước, chuyến đã xong xuống dưới và làm mờ. `getTripSummaries` đổi thành `ORDER BY t.is_completed ASC, t.created_at DESC, t.id DESC`. Con trỏ phân trang phải thêm `is_completed`, nếu không cuộn qua ranh giới đang đi / đã xong sẽ trùng hoặc sót chuyến. Phần dựng `WHERE` của con trỏ tách ra [summaryCursor.ts](../services/summaryCursor.ts), có test; kiểu con trỏ trong `loadMoreSummaries` của store cũng đổi theo. Ba chỗ này phải đổi cùng lúc.
+* Tạo chuyến dùng `Stepper` chọn số người (mặc định 2, tối thiểu 2) và một ô tên cho từng người. Ô để trống thành "Người N" (i18n), thay "User N" cứng trước đây. Tiền tệ chọn bằng `SegmentedControl`.
+* Tổng kết đảo thứ tự: "Cần chuyển N lần" lên đầu, rồi dòng chọn cách chia (mở bảng trượt), rồi "Từng người", rồi dòng quỹ của thủ quỹ. Nút "Chia sẻ kết quả" cố định ở đáy; ảnh chụp có thêm tên chuyến và cách chia. `SummaryTable` dạng lưới bị xoá, thông tin của nó nằm ở danh sách từng người và bảng chi tiết.
+* Logo mới là đồng xu chia đôi: nền ô liu, nửa trái màu cát, nửa phải màu chanh lệch xuống khoảng 6%. SVG gốc ở `assets/images/logo.svg`. Icon, adaptive icon, splash và favicon đổi theo. Logo chỉ hiện sau khi build lại bản native (CNG), Expo Go không thấy.
+* Đã xoá `SubmitButton` và `SummaryTable`, không ai dùng nữa. `CustomHeader`, `RenameTripDialog`, `KeyboardAvoidingView` vẫn còn importer nên giữ lại.
+* Thêm key `common.submitting` vào ba locale; `MemberDetailModal` từng hiện nguyên chữ key khi đang lưu.
+* Dead code có từ trước, chưa xoá: key `components.badge_active`, `add_payment.amount_placeholder`, `add_payment.submit_empty` và hơn hai mươi key khác không còn chỗ dùng, cùng các file `react-logo*.png`, `partial-react-logo.png` trong `assets/images`. Kiểm tra bằng cách so với commit gốc `5351b42`: không key nào trở thành mồ côi do đợt làm lại này.
+* Chưa chạy trên Expo Go. Còn phải thử tay cả sáng lẫn tối theo mục "Kiểm tra" của spec, và mở một chuyến tạo trước đợt này để so số liệu.
+
+---
+
+## 📅 Cập Nhật (16-11-2026) — Tuỳ chỉnh số tiền từng người trong chi tiêu
+
+Chia đều làm thiệt người tiêu ít. Ví dụ bữa sáng 4 người: hủ tiếu 30k, phở 40k, hai tô bún riêu 35k. Nay mỗi dòng người tham gia ở form thêm/sửa chi tiêu có ô số tiền. Gõ số thì dòng đó khoá, hiện ổ khoá. Ô trống hiện phần chia đều làm placeholder; người không khoá chia đều phần còn lại. Xoá trống ô là mở khoá.
+
+* Bảng `expense_participants` có thêm cột `share REAL`, cả trong `CREATE TABLE` lẫn `ALTER TABLE` bọc try/catch. `NULL` là chia đều, nên chi tiêu cũ tính y như trước.
+* `Expense.customShares` chỉ chứa người bị khoá. [calculator.ts](../utils/calculator.ts) có `getExpenseShares`, chỗ duy nhất quy đổi chi tiêu ra phần tiền từng người. `calculateSummary`, `ExpenseItem`, `MemberSelector` đều gọi nó, đừng tự chia `amount / participants.length` nữa.
+* `getCustomSharesError` chặn ba trường hợp. Tổng khoá vượt tổng tiền. Khoá hết mà lệch tổng quá `0.01`. Khoá chưa hết người nhưng đã dùng hết tiền, khiến người còn lại phải trả 0. Ô tổng tiền còn trống thì chưa báo gì. Lỗi hiện đỏ ngay dưới danh sách vì nút Lưu đã bị tắt.
+* Android không bôi đen chữ khi chạm dù có `selectTextOnFocus`. `ShareInput` trong [MemberSelector.tsx](../components/MemberSelector.tsx) gọi lại `setSelection` sau 50ms.
+* Bỏ chọn rồi chọn lại một người thì người đó về chia đều. Danh sách chi tiêu hiện "Chia tuỳ chỉnh" thay cho "x/người" khi có khoá.
+* Chọn khoá từng người thay vì công tắc "Chia đều / Tuỳ chỉnh": công tắc không xử lý được "chỉnh vài người, còn lại chia đều".
+* ⚠️ Ô nhập nằm cuối form nên trên Android edge-to-edge bàn phím che mất. `add-expense` tự cuộn dòng đang nhập lên, lúc focus và sau `keyboardDidShow` (đợi `KeyboardAvoidingView` co xong). Thêm ô nhập ở cuối form khác thì làm tương tự.
+* Bộ test Jest đầu tiên của repo: [calculator.test.ts](../utils/__tests__/calculator.test.ts). Nó import `expect`/`test` từ `@jest/globals` vì `tsc` không nhận global của `@types/jest` với `expo/tsconfig.base`.
+
+---
+
+## 📅 Cập Nhật (24-10-2026) — Nâng từ SDK 57 lên SDK 58
+
+Expo Go mới chỉ mở được app SDK 58. Dự án giờ chạy Expo 58.0.19, React Native 0.88.0 và React 19.3.0. Các gói còn lại được căn bằng `npx expo install --fix`.
+
+* Chạy Expo CLI bằng Node 22 (`PATH=/usr/local/bin:$PATH`). SDK 58 chỉ hỗ trợ Node 22.13+, 24.3+ hoặc 26+. Node 25 mặc định của máy nằm ngoài dải này.
+* Jest 30 kéo theo `@parcel/watcher`, một gói có script install. `strictDepBuilds` chặn nó thành lỗi cài đặt. [pnpm-workspace.yaml](../pnpm-workspace.yaml) đặt `'@parcel/watcher': false`, vì gói đã có binary dựng sẵn. Script kia chỉ build từ nguồn khi bật `npm_config_build_from_source`.
+* pnpm 11 từ chối các bản phát hành quá mới. 18 gói SDK 58 lúc đó chưa đủ tuổi. pnpm tự ghi chúng vào `minimumReleaseAgeExclude`, kèm version cụ thể. Khi các bản này đủ tuổi, có thể bỏ danh sách đi.
+* Strict TypeScript API của RN 0.88 bắt hai lỗi kiểu. `ListHeaderComponent` không nhận `null` nữa, phải dùng `undefined`. Annotation tay trên `keyExtractor` làm FlatList suy sai kiểu item. Cứ để TS suy từ `data`.
+* RNGH lên 3.3. [SwipeBack.tsx](../components/SwipeBack.tsx) và [TripCard.tsx](../components/TripCard.tsx) đã chuyển từ `Gesture.Pan()` sang hook `usePanGesture`. `onStart` đổi thành `onActivate`, `onEnd` thành `onDeactivate`, ngữ nghĩa giữ nguyên. Config đặt `disableReanimated: true`, nên callback luôn chạy trên JS thread, kể cả khi Expo Go có sẵn reanimated. Hook so config theo tham chiếu, vì vậy config phải bọc trong `useMemo`.
+* `ThemeProvider`, `DarkTheme` và `DefaultTheme` giờ import thẳng từ `expo-router`. Lối `expo-router/react-navigation` vẫn chạy, nhưng SDK 58 đã đưa ba export này ra gói gốc. Hướng dẫn migrate Router không có mục nào khác chạm tới app. Mọi href đều đã đủ `id`, và `navigation.goBack` vẫn là closure nên truyền rời vào `SwipeBack` được.
+* `react-native-view-shot` lên 6, `ref.current.capture()` vẫn giữ nguyên. `react-native-webview` lên 14. App không import nó trực tiếp.
+* Release build Android giờ bật R8 mặc định. Thư viện dùng reflection có thể cần keep rule qua `expo-build-properties`. Chưa build APK để kiểm.
+* Đã sửa hết 33 lỗi lint cũ từ SDK 57.
+  * `react-hooks/refs`: `Animated.Value` chuyển từ `useRef(...).current` sang `useState(() => ...)`.
+  * `react-hooks/set-state-in-effect`: form sửa chi tiêu và đóng quỹ lấy giá trị đầu ngay trong `useState`. Tâm điểm tất toán ở Tổng kết giờ là giá trị suy ra, state chỉ giữ lựa chọn của người dùng. Hai sheet (`summary`, `MemberDetailModal`) bật `showModal` ngay lúc render. `RenameTripDialog`, `MemberDetailModal` và tab ở màn chi tiết so với giá trị lần render trước, theo mẫu "adjusting state when a prop changes" của React.
+  * Còn 7 cảnh báo `exhaustive-deps`/`import` có từ trước, chưa đụng.
+* Typecheck sạch, `expo-doctor` qua 20/20. `expo export --platform android` bundle thành công.
+* Sau đó một lần `pnpm update` làm app crash ngay khi mở trong Expo Go. Lệnh này đổi mọi range `~`/chính xác thành `^` và kéo RNGH lên 3.4.0, React lên 19.3.1. RNGH 3.4 gọi `RNGestureHandlerModule.getModuleId()` ngay trong `GestureHandlerRootView` trên Android. Native 3.3 đóng gói trong Expo Go 58 không có method này.
+  * Đã đưa React về 19.3.0 và RNGH về `~3.3.0` bằng `npx expo install --fix`.
+  * pnpm giữ tiền tố cũ của gói đã có trong `package.json`, nên `expo install` vẫn ghi `^`. Range của mọi gói có trong `bundledNativeModules.json` đã được sửa tay về đúng dạng Expo chốt.
+  * **Đừng chạy `pnpm update`.** Nâng gói Expo bằng `npx expo install`.
+* Chưa chạy trên thiết bị thật.
+
+---
+
 ## 📅 Cập Nhật (22-10-2026) — Status bar đen trong Expo Go
 
 Trên Expo Go 57.0.9 (Galaxy Note 20 Ultra, Android 13), status bar là một dải đen đặc. App bị đẩy xuống ngay dưới dải đó. Icon tối nằm trên nền đen nên gần như không thấy.
