@@ -43,3 +43,9 @@ test('calculateSummary uses locked shares', () => {
 test('getCustomSharesError: no error while the amount is still empty', () => {
   expect(getCustomSharesError(0, ['a', 'b'], { a: 30000 })).toBeNull();
 });
+
+test('getCustomSharesError: locks use up the total while others are unlocked', () => {
+  expect(getCustomSharesError(100, ['a', 'b', 'c', 'd'], { a: 70, b: 30 })).toBe('no_remainder');
+  expect(getCustomSharesError(100, ['a', 'b', 'c'], { a: 70, b: 29.995 })).toBe('no_remainder');
+  expect(getCustomSharesError(100, ['a', 'b', 'c'], { a: 70, b: 29 })).toBeNull();
+});

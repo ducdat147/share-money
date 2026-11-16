@@ -19,7 +19,8 @@
 		"update_title": "Edit Expense",
 		"err_shares_exceed": "Locked amounts exceed the expense total",
 		"err_shares_mismatch": "Each person's amounts must add up to the expense total",
-		"custom_split": "Custom split"
+		"custom_split": "Custom split",
+		"err_shares_no_remainder": "Locked amounts use up the total; deselect the people who owe nothing"
 	},
 	"add_payment": {
 		"amount_label": "Amount",

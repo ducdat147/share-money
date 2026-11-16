@@ -27,7 +27,7 @@ const ExpenseItem: React.FC<ExpenseItemProps> = React.memo(
       : t('summary.treasurer');
 
     const hasCustomShares = Object.keys(expense.customShares ?? {}).length > 0;
-    const perPerson = expense.participants.length > 0
+    const perPerson = !hasCustomShares && expense.participants.length > 0
       ? expense.amount / expense.participants.length
       : 0;
     const { colors } = useAppTheme();

@@ -19,7 +19,8 @@
 		"update_title": "Modifier la dépense",
 		"err_shares_exceed": "Les montants fixés dépassent le total de la dépense",
 		"err_shares_mismatch": "La somme des montants doit égaler le total de la dépense",
-		"custom_split": "Répartition personnalisée"
+		"custom_split": "Répartition personnalisée",
+		"err_shares_no_remainder": "Les montants fixés épuisent le total ; désélectionnez les personnes qui ne doivent rien"
 	},
 	"add_payment": {
 		"amount_label": "Montant",
