@@ -37,6 +37,7 @@
 		"delete": "Delete",
 		"error": "Error",
 		"save": "Save",
+		"submitting": "Saving...",
 		"settings": "Settings",
 		"warning": "Warning",
 		"discard": "Discard",
