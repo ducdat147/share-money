@@ -2,23 +2,21 @@
 	"add_expense": {
 		"amount_label": "Số tiền",
 		"amount_placeholder": "0",
-		"desc_label": "Mô tả",
-		"desc_placeholder": "Ví dụ: Ăn trưa, Đổ xăng...",
 		"err_fail": "Không thể thêm chi tiêu",
-		"err_no_description": "Vui lòng nhập mô tả",
 		"err_no_participants": "Vui lòng chọn ít nhất một người tham gia",
 		"err_no_payer": "Vui lòng chọn người chi",
 		"participants_label": "Người tham gia chia tiền",
 		"payer_label": "Người chi",
-		"payer_placeholder": "Chọn người chi...",
-		"submit": "Thêm khoản chi",
-		"submitting": "Đang thêm...",
-		"title": "Thêm chi tiêu",
-		"update_btn": "Cập nhật",
-		"update_title": "Sửa chi tiêu",
 		"err_shares_exceed": "Tổng số tiền đã khoá vượt quá tổng chi tiêu",
 		"err_shares_mismatch": "Tổng số tiền từng người phải bằng tổng chi tiêu",
-		"err_shares_no_remainder": "Các phần đã khoá dùng hết tổng tiền, hãy bỏ chọn những người không phải trả"
+		"err_shares_no_remainder": "Các phần đã khoá dùng hết tổng tiền, hãy bỏ chọn những người không phải trả",
+		"desc_optional": "Mô tả (không bắt buộc)",
+		"auto_desc": "Chi tiêu {{time}}",
+		"payer_fund": "Quỹ ({{name}})",
+		"split_label": "Chia cho",
+		"split_all": "Cả nhóm ({{n}}) ▾",
+		"split_some": "{{n}} người",
+		"split_custom": "{{n}} người · tuỳ chỉnh"
 	},
 	"add_payment": {
 		"amount_label": "Số tiền",
@@ -47,7 +45,10 @@
 		"error": "Lỗi",
 		"save": "Lưu",
 		"settings": "Cài đặt",
-		"warning": "Cảnh báo"
+		"warning": "Cảnh báo",
+		"discard": "Bỏ",
+		"discard_title": "Bỏ khoản đang nhập?",
+		"discard_desc": "Số tiền vừa nhập sẽ không được lưu."
 	},
 	"components": {
 		"backspace": "Xoá chữ số",

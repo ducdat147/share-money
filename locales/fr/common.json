@@ -2,23 +2,21 @@
 	"add_expense": {
 		"amount_label": "Montant",
 		"amount_placeholder": "0",
-		"desc_label": "Description",
-		"desc_placeholder": "Ex. : Déjeuner, Essence...",
 		"err_fail": "Impossible d'ajouter la dépense",
-		"err_no_description": "Veuillez saisir une description",
 		"err_no_participants": "Veuillez sélectionner au moins un participant",
 		"err_no_payer": "Veuillez sélectionner le payeur",
 		"participants_label": "Participants au partage",
 		"payer_label": "Payé par",
-		"payer_placeholder": "Sélectionner le payeur...",
-		"submit": "Ajouter la dépense",
-		"submitting": "Ajout en cours...",
-		"title": "Ajouter une dépense",
-		"update_btn": "Mettre à jour",
-		"update_title": "Modifier la dépense",
 		"err_shares_exceed": "Les montants fixés dépassent le total de la dépense",
 		"err_shares_mismatch": "La somme des montants doit égaler le total de la dépense",
-		"err_shares_no_remainder": "Les montants fixés épuisent le total ; désélectionnez les personnes qui ne doivent rien"
+		"err_shares_no_remainder": "Les montants fixés épuisent le total ; désélectionnez les personnes qui ne doivent rien",
+		"desc_optional": "Description (facultatif)",
+		"auto_desc": "Dépense {{time}}",
+		"payer_fund": "Caisse ({{name}})",
+		"split_label": "Partager entre",
+		"split_all": "Tout le groupe ({{n}}) ▾",
+		"split_some": "{{n}} sélectionné(s)",
+		"split_custom": "{{n}} sélectionné(s) · personnalisé"
 	},
 	"add_payment": {
 		"amount_label": "Montant",
@@ -47,7 +45,10 @@
 		"error": "Erreur",
 		"save": "Enregistrer",
 		"settings": "Paramètres",
-		"warning": "Attention"
+		"warning": "Attention",
+		"discard": "Abandonner",
+		"discard_title": "Abandonner cette dépense ?",
+		"discard_desc": "Le montant saisi ne sera pas enregistré."
 	},
 	"components": {
 		"backspace": "Effacer le chiffre",
