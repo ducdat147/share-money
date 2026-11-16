@@ -1,15 +1,20 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import CustomHeader from '@/components/CustomHeader';
+import { useDialog } from '@/components/DialogProvider';
+import { AppText, Card, ListRow } from '@/components/ui';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { ThemeColors, ThemeMode, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { ThemeColors, ThemeMode, Spacing } from '@/constants/theme';
+
+const CHECK = '✓';
 
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
   const { colors, themeMode, setThemeMode } = useAppTheme();
+  const { showDialog } = useDialog();
   const [currentLang, setCurrentLang] = useState(i18n.language);
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -24,73 +29,56 @@ export default function SettingsScreen() {
     { mode: 'dark', icon: 'moon', labelKey: 'settings.theme_dark' },
   ];
 
+  const languageOptions = [
+    { lang: 'vi', labelKey: 'settings.language_vi' },
+    { lang: 'fr', labelKey: 'settings.language_fr' },
+    { lang: 'en', labelKey: 'settings.language_en' },
+  ];
+
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <CustomHeader title={t("settings.title")} />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <CustomHeader title={t('settings.title')} />
       <View style={styles.content}>
-        {/* Appearance Section */}
-        <Text style={styles.sectionTitle}>{t("settings.appearance")}</Text>
-        {themeOptions.map((opt) => (
-          <TouchableOpacity
-            key={opt.mode}
-            style={styles.optionRow}
-            onPress={() => setThemeMode(opt.mode)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.optionLeft}>
-              <Ionicons
-                name={opt.icon}
-                size={20}
-                color={colors.textSecondary}
+        <AppText variant="label" weight="semibold" color={colors.textMuted} style={styles.sectionTitle}>
+          {t('settings.appearance')}
+        </AppText>
+        <Card style={styles.group}>
+          {themeOptions.map((opt, i) => (
+            <View key={opt.mode} style={i > 0 && styles.divided}>
+              <ListRow
+                title={t(opt.labelKey)}
+                left={<Ionicons name={opt.icon} size={20} color={colors.textSecondary} />}
+                amount={themeMode === opt.mode ? CHECK : undefined}
+                amountColor={colors.primary}
+                onPress={() => setThemeMode(opt.mode)}
               />
-              <Text style={styles.optionText}>{t(opt.labelKey)}</Text>
             </View>
-            {themeMode === opt.mode && (
-              <Ionicons name="checkmark" size={24} color={colors.primary} />
-            )}
-          </TouchableOpacity>
-        ))}
+          ))}
+        </Card>
 
-        {/* Language Section */}
-        <Text style={styles.sectionTitle}>{t("settings.language")}</Text>
-        <TouchableOpacity
-          style={styles.optionRow}
-          onPress={() => changeLanguage("vi")}
-          activeOpacity={0.7}
-        >
-          <View style={styles.optionLeft}>
-            <Text style={styles.optionText}>{t("settings.language_vi")}</Text>
-          </View>
-          {currentLang === "vi" && (
-            <Ionicons name="checkmark" size={24} color={colors.primary} />
-          )}
-        </TouchableOpacity>
+        <AppText variant="label" weight="semibold" color={colors.textMuted} style={styles.sectionTitle}>
+          {t('settings.language')}
+        </AppText>
+        <Card style={styles.group}>
+          {languageOptions.map((opt, i) => (
+            <View key={opt.lang} style={i > 0 && styles.divided}>
+              <ListRow
+                title={t(opt.labelKey)}
+                amount={currentLang === opt.lang ? CHECK : undefined}
+                amountColor={colors.primary}
+                onPress={() => changeLanguage(opt.lang)}
+              />
+            </View>
+          ))}
+        </Card>
 
-        <TouchableOpacity
-          style={styles.optionRow}
-          onPress={() => changeLanguage("fr")}
-          activeOpacity={0.7}
-        >
-          <View style={styles.optionLeft}>
-            <Text style={styles.optionText}>{t("settings.language_fr")}</Text>
-          </View>
-          {currentLang === "fr" && (
-            <Ionicons name="checkmark" size={24} color={colors.primary} />
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.optionRow}
-          onPress={() => changeLanguage("en")}
-          activeOpacity={0.7}
-        >
-          <View style={styles.optionLeft}>
-            <Text style={styles.optionText}>{t("settings.language_en")}</Text>
-          </View>
-          {currentLang === "en" && (
-            <Ionicons name="checkmark" size={24} color={colors.primary} />
-          )}
-        </TouchableOpacity>
+        <Card style={[styles.group, styles.aboutGroup]}>
+          <ListRow
+            title={t('common.about')}
+            left={<Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />}
+            onPress={() => showDialog('Share Money', t('home.about_desc'))}
+          />
+        </Card>
       </View>
     </SafeAreaView>
   );
@@ -106,33 +94,20 @@ const createStyles = (colors: ThemeColors) =>
       padding: Spacing.lg,
     },
     sectionTitle: {
-      fontSize: FontSize.md,
-      fontWeight: FontWeight.bold,
-      color: colors.textMuted,
       textTransform: 'uppercase',
       letterSpacing: 1,
-      marginBottom: Spacing.md,
+      marginBottom: Spacing.sm,
       marginTop: Spacing.md,
     },
-    optionRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: colors.surface,
-      padding: Spacing.md,
-      borderRadius: BorderRadius.md,
-      marginBottom: Spacing.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
+    group: {
+      padding: 0,
+      overflow: 'hidden',
     },
-    optionLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.md,
+    aboutGroup: {
+      marginTop: Spacing.xl,
     },
-    optionText: {
-      fontSize: FontSize.md,
-      color: colors.text,
-      fontWeight: FontWeight.medium,
+    divided: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
     },
   });

@@ -57,9 +57,7 @@
 		"increase": "Augmenter",
 		"more_options": "Plus d'options",
 		"badge_active": "En cours",
-		"badge_completed": "Terminé",
 		"deselect_all": "Tout désélectionner",
-		"expense_count": "{{count}} dépenses",
 		"member_count": "{{count}} membres",
 		"note": "Note",
 		"paid_by": "Payé par",
@@ -68,7 +66,6 @@
 		"select_all": "Tout sélectionner",
 		"select_at_least_one": "Sélectionnez au moins une personne",
 		"split_equally": "Partagé à parts égales entre {{count}} personnes",
-		"total_expense": "Total dépensé",
 		"split_custom_hint": "Saisissez un montant par personne ; les champs vides se partagent le reste"
 	},
 	"create_trip": {
@@ -90,9 +87,11 @@
 		"add_trip": "Créer un voyage",
 		"empty_desc": "Créez votre premier voyage pour commencer !",
 		"empty_title": "Aucun voyage pour le moment",
+		"new_trip": "Nouveau voyage",
 		"search_placeholder": "Rechercher un voyage...",
-		"stats_active": "{{count}} en cours",
-		"stats_trips": "{{count}} voyages"
+		"status_active": "En cours",
+		"status_done": "Terminé",
+		"title": "Voyages"
 	},
 	"member_detail": {
 		"add_fund": "Ajouter à la cagnotte",

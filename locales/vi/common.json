@@ -57,9 +57,7 @@
 		"increase": "Tăng",
 		"more_options": "Thêm tuỳ chọn",
 		"badge_active": "Đang diễn ra",
-		"badge_completed": "Đã kết thúc",
 		"deselect_all": "Bỏ chọn tất cả",
-		"expense_count": "{{count}} khoản chi",
 		"member_count": "{{count}} người",
 		"note": "Ghi chú",
 		"paid_by": "Trả bởi",
@@ -68,7 +66,6 @@
 		"select_all": "Chọn tất cả",
 		"select_at_least_one": "Chọn ít nhất 1 người",
 		"split_equally": "Chia đều cho {{count}} người",
-		"total_expense": "Tổng chi",
 		"split_custom_hint": "Nhập số riêng cho từng người, ô trống tự chia đều phần còn lại"
 	},
 	"create_trip": {
@@ -90,9 +87,11 @@
 		"add_trip": "Tạo chuyến đi",
 		"empty_desc": "Hãy tạo chuyến đi đầu tiên để bắt đầu!",
 		"empty_title": "Chưa có chuyến đi nào",
+		"new_trip": "Chuyến đi",
 		"search_placeholder": "Tìm chuyến đi...",
-		"stats_active": "{{count}} đang diễn ra",
-		"stats_trips": "{{count}} chuyến đi"
+		"status_active": "Đang đi",
+		"status_done": "Đã xong",
+		"title": "Chuyến đi"
 	},
 	"member_detail": {
 		"add_fund": "Đóng thêm tiền quỹ",
