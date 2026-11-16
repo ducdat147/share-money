@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import React, { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -22,6 +22,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { BorderRadius, Spacing, ThemeColors } from '@/constants/theme';
+import { DialogOutlet, useDismissDialog } from '@/components/DialogProvider';
 
 // Giống MemberDetailModal: bản build bật edge-to-edge nên cửa sổ Dialog của Modal không co lại
 // khi bàn phím mở, sheet nằm dưới bàn phím. Expo Go tắt edge-to-edge, cửa sổ tự co, nên chỉ tự
@@ -144,6 +145,11 @@ export default function BottomSheet({
     [translateY, hiddenOffset],
   );
   const pan = usePanGesture(panConfig);
+  const dismissDialog = useDismissDialog();
+  // Nút back Android đóng hộp thoại đang hiện trong sheet trước, rồi mới tới sheet.
+  const handleModalRequestClose = useCallback(() => {
+    if (!dismissDialog()) onRequestClose();
+  }, [dismissDialog, onRequestClose]);
 
   if (!showModal) return null;
 
@@ -156,7 +162,7 @@ export default function BottomSheet({
       // Cửa sổ Modal mở ra với icon status bar màu trắng, kể cả ở light mode, nên đặt lại sau khi hiện.
       onShow={() => StatusBar.setStyle(isDark ? 'light' : 'dark')}
       animationType="none"
-      onRequestClose={onRequestClose}
+      onRequestClose={handleModalRequestClose}
     >
       {/* Modal trên Android là cửa sổ riêng, cử chỉ RNGH bên trong cần root view của nó. */}
       <GestureHandlerRootView style={styles.container}>
@@ -203,6 +209,7 @@ export default function BottomSheet({
             )}
           </Animated.View>
         </KeyboardAvoidingView>
+        <DialogOutlet />
       </GestureHandlerRootView>
     </Modal>
   );

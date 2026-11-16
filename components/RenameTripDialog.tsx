@@ -5,6 +5,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
+import { DialogOutlet, useDismissDialog } from '@/components/DialogProvider';
 
 interface Props {
   visible: boolean;
@@ -16,6 +17,7 @@ interface Props {
 /** Hộp đổi tên chuyến đi, cùng kiểu với hộp thoại của DialogProvider. */
 export default function RenameTripDialog({ visible, initialName, onCancel, onSave }: Props) {
   const { colors } = useAppTheme();
+  const dismissDialog = useDismissDialog();
   const { t } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -43,7 +45,14 @@ export default function RenameTripDialog({ visible, initialName, onCancel, onSav
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => {
+        if (!dismissDialog()) onCancel();
+      }}
+    >
       {/* Android tự thu nhỏ cửa sổ Modal khi bàn phím mở; chỉ iOS cần đẩy hộp lên. */}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <Pressable style={styles.overlay} onPress={onCancel}>
@@ -77,6 +86,7 @@ export default function RenameTripDialog({ visible, initialName, onCancel, onSav
           </Pressable>
         </Pressable>
       </KeyboardAvoidingView>
+      <DialogOutlet />
     </Modal>
   );
 }
