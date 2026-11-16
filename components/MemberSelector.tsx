@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, type TextInputInstance, type TextInputProps } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, TextInput, type TextInputInstance, type TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Member } from '@/utils/types';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
-import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
 import { CurrencyCode, formatCurrency, roundCurrency } from '@/utils/currency';
 import UserAvatar from './UserAvatar';
+import { AppText } from './ui';
 
 interface MemberSelectorProps {
   members: Member[];
@@ -41,13 +42,17 @@ const MemberSelector: React.FC<MemberSelectorProps> = React.memo(
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.label}>{t('components.participants_count', { selected: selected.length, total: members.length })}</Text>
+          <AppText variant="label" weight="semibold" color={colors.textSecondary}>
+            {t('components.participants_count', { selected: selected.length, total: members.length })}
+          </AppText>
           <TouchableOpacity
             onPress={allSelected ? onDeselectAll : onSelectAll}
             hitSlop={8}
             accessibilityRole="button"
           >
-            <Text style={styles.toggleAll}>{t(allSelected ? 'components.deselect_all' : 'components.select_all')}</Text>
+            <AppText variant="label" weight="semibold" color={colors.primary}>
+              {t(allSelected ? 'components.deselect_all' : 'components.select_all')}
+            </AppText>
           </TouchableOpacity>
         </View>
 
@@ -68,9 +73,11 @@ const MemberSelector: React.FC<MemberSelectorProps> = React.memo(
               >
                 <View style={[styles.person, !isSelected && styles.personExcluded]}>
                   <UserAvatar name={member.name} isTreasurer={member.id === treasurerId} size={32} />
-                  <Text style={styles.name} numberOfLines={1}>{member.name}</Text>
+                  <AppText style={styles.name} numberOfLines={1}>{member.name}</AppText>
                   {member.id === treasurerId && (
-                    <Text style={styles.treasurerBadge}>{t('create_trip.treasurer')}</Text>
+                    <AppText variant="caption" weight="bold" color={colors.onAccent} style={styles.treasurerBadge}>
+                      {t('create_trip.treasurer')}
+                    </AppText>
                   )}
                 </View>
                 {isSelected ? (
@@ -83,11 +90,11 @@ const MemberSelector: React.FC<MemberSelectorProps> = React.memo(
                       onChangeText={(text) => onChangeShare(member.id, text)}
                       onFocus={() => onShareFocus?.(listY.current + (rowYs.current[member.id] ?? 0))}
                       placeholder={share > 0 ? formatCurrency(roundCurrency(share, currencyCode), currencyCode) : ''}
-                      placeholderTextColor={colors.primaryLight}
+                      placeholderTextColor={colors.textSecondary}
                     />
                   </View>
                 ) : (
-                  <Text style={[styles.share, styles.shareExcluded]}>—</Text>
+                  <AppText variant="label" weight="semibold" color={colors.textMuted}>—</AppText>
                 )}
                 <Ionicons
                   name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
@@ -99,7 +106,11 @@ const MemberSelector: React.FC<MemberSelectorProps> = React.memo(
           })}
         </View>
 
-        <Text style={[styles.footer, (selected.length === 0 || error) && styles.footerWarning]}>
+        <AppText
+          variant="label"
+          color={selected.length === 0 || error ? colors.danger : colors.textMuted}
+          style={styles.footer}
+        >
           {selected.length === 0
             ? t('components.select_at_least_one')
             : error
@@ -107,7 +118,7 @@ const MemberSelector: React.FC<MemberSelectorProps> = React.memo(
               : hasLocked
               ? t('components.split_custom_hint')
               : t('components.split_equally', { count: selected.length })}
-        </Text>
+        </AppText>
       </View>
     );
   },
@@ -139,19 +150,6 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'space-between',
       marginBottom: Spacing.sm,
     },
-    // Cùng kiểu với nhãn form ở add-expense ("Mô tả", "Số tiền", "Người chi").
-    label: {
-      fontSize: FontSize.sm,
-      fontWeight: FontWeight.bold,
-      color: colors.textSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: 1,
-    },
-    toggleAll: {
-      fontSize: FontSize.sm,
-      fontWeight: FontWeight.semibold,
-      color: colors.primary,
-    },
     list: {
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -181,26 +179,12 @@ const createStyles = (colors: ThemeColors) =>
     },
     name: {
       flexShrink: 1,
-      fontSize: FontSize.md,
-      fontWeight: FontWeight.medium,
-      color: colors.text,
     },
     treasurerBadge: {
       backgroundColor: colors.accent,
-      color: colors.onAccent,
-      fontSize: FontSize.xs,
-      fontWeight: FontWeight.bold,
       paddingHorizontal: Spacing.xs,
       borderRadius: BorderRadius.sm,
       overflow: 'hidden',
-    },
-    share: {
-      fontSize: FontSize.sm,
-      fontWeight: FontWeight.semibold,
-      color: colors.primaryLight,
-    },
-    shareExcluded: {
-      color: colors.textMuted,
     },
     shareField: {
       flexDirection: 'row',
@@ -216,8 +200,9 @@ const createStyles = (colors: ThemeColors) =>
       borderColor: colors.border,
       textAlign: 'right',
       fontSize: FontSize.sm,
-      fontWeight: FontWeight.semibold,
-      color: colors.primaryLight,
+      fontFamily: FontFamily.semibold,
+      fontVariant: ['tabular-nums'],
+      color: colors.textSecondary,
     },
     shareInputLocked: {
       borderColor: colors.primary,
@@ -225,11 +210,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     footer: {
       marginTop: Spacing.sm,
-      fontSize: FontSize.sm,
-      color: colors.textMuted,
-    },
-    footerWarning: {
-      color: colors.danger,
     },
   });
 

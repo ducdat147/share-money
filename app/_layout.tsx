@@ -16,6 +16,14 @@ import { Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold } from '@expo-goo
 
 SplashScreen.preventAutoHideAsync();
 
+// Route chỉ chứa một BottomSheet: màn phía sau vẫn hiện, sheet tự trượt nên tắt hoạt ảnh chuyển màn.
+// contentStyle mặc định tô nền đặc, nên ghi đè thành trong suốt.
+const sheetRouteOptions = {
+  presentation: 'transparentModal',
+  animation: 'none',
+  contentStyle: { backgroundColor: 'transparent' },
+} as const;
+
 export default function RootLayout() {
   const { colors, isDark } = useAppTheme();
   const [fontsLoaded, fontError] = useFonts({ Lexend_400Regular, Lexend_600SemiBold, Lexend_700Bold });
@@ -117,15 +125,11 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="trip/[id]/add-expense"
-            options={{
-              presentation: 'modal',
-            }}
+            options={sheetRouteOptions}
           />
           <Stack.Screen
             name="trip/[id]/add-payment"
-            options={{
-              presentation: 'modal',
-            }}
+            options={sheetRouteOptions}
           />
           <Stack.Screen
             name="trip/[id]/summary"

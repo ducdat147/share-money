@@ -1,29 +1,25 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
-  Platform, Modal, FlatList, Keyboard, type ScrollViewInstance,
+  View, StyleSheet, TextInput, ScrollView, Pressable, FlatList, Keyboard, type ScrollViewInstance,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTripStore } from '@/hooks/useTripStore';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import MemberSelector from '@/components/MemberSelector';
-import UserAvatar from '@/components/UserAvatar';
-import CustomHeader from '@/components/CustomHeader';
-import KeyboardAvoidingView from '@/components/KeyboardAvoidingView';
-import SubmitButton from '@/components/SubmitButton';
+import { AppText, BottomSheet, Button, NumPad } from '@/components/ui';
 import { useDialog } from '@/components/DialogProvider';
 import { useTranslation } from 'react-i18next';
-import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
 import { getCustomSharesError, getExpenseShares } from '@/utils/calculator';
-import { parseAmountInput } from '@/utils/currency';
+import { DEFAULT_CURRENCY, formatCurrency, parseAmountInput } from '@/utils/currency';
+import { autoExpenseDescription, getDefaultPayerId } from '@/utils/defaults';
+import { Member } from '@/utils/types';
 
 export default function AddExpenseScreen() {
   const { id, expenseId } = useLocalSearchParams<{ id: string; expenseId?: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { trips, addExpense, updateExpense } = useTripStore();
+  const { trips, addExpense, updateExpense, removeExpense } = useTripStore();
   const { colors } = useAppTheme();
   const { showDialog } = useDialog();
   const { t } = useTranslation();
@@ -37,7 +33,9 @@ export default function AddExpenseScreen() {
   );
 
   const [description, setDescription] = useState(existingExpense?.description ?? '');
-  const [amountText, setAmountText] = useState(existingExpense?.amount.toString() ?? '');
+  // Giữ giá trị ban đầu để biết người dùng đã nhập số dở hay chưa khi đóng bảng.
+  const [initialAmountText] = useState(() => existingExpense?.amount.toString() ?? '');
+  const [amountText, setAmountText] = useState(initialAmountText);
   const [selectedMembers, setSelectedMembers] = useState<string[]>(
     existingExpense?.participants ?? trip?.members.map((m) => m.id) ?? [],
   );
@@ -47,10 +45,15 @@ export default function AddExpenseScreen() {
       Object.entries(existingExpense?.customShares ?? {}).map(([memberId, share]) => [memberId, share.toString()]),
     ),
   );
-  const [paidBy, setPaidBy] = useState<string | undefined>(
-    existingExpense?.paidBy || (trip?.treasurerId ?? trip?.members[0]?.id),
+  // Khoản cũ chưa có người chi (trước migration) là khoản chi từ quỹ, nên rơi về thủ quỹ như trước,
+  // không lấy người chi gần nhất.
+  const [paidBy, setPaidBy] = useState<string | undefined>(() =>
+    existingExpense
+      ? existingExpense.paidBy || (trip?.treasurerId ?? trip?.members[0]?.id)
+      : trip && getDefaultPayerId(trip),
   );
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [splitOpen, setSplitOpen] = useState(false);
+  const [numPadOpen, setNumPadOpen] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const amount = useMemo(
@@ -95,6 +98,15 @@ export default function AddExpenseScreen() {
     [trip, paidBy]
   );
 
+  const splitLabel = useMemo(() => {
+    const n = selectedMembers.length;
+    if (Object.keys(customShares).length > 0) return t('add_expense.split_custom', { n });
+    if (n === trip?.members.length) return t('add_expense.split_all', { n });
+    return t('add_expense.split_some', { n });
+  }, [selectedMembers, customShares, trip?.members.length, t]);
+  // Nhãn "Cả nhóm" đã có sẵn ▾ nên chỉ thêm mũi tên cho các nhãn còn lại hoặc khi đang mở.
+  const isSplitAll = Object.keys(customShares).length === 0 && selectedMembers.length === trip?.members.length;
+
   const handleToggleMember = useCallback((memberId: string) => {
     setSelectedMembers((prev) =>
       prev.includes(memberId)
@@ -106,7 +118,7 @@ export default function AddExpenseScreen() {
   }, []);
 
   // Ô nhập phần tiền nằm cuối form nên dễ bị bàn phím che: cuộn dòng đang nhập lên đầu vùng nhìn thấy,
-  // cả ngay lúc focus lẫn sau khi bàn phím mở xong và KeyboardAvoidingView đã co lại.
+  // cả ngay lúc focus lẫn sau khi bàn phím mở xong và bảng đã né bàn phím.
   const scrollRef = useRef<ScrollViewInstance>(null);
   const membersY = useRef(0);
   const focusedShareY = useRef<number | null>(null);
@@ -135,7 +147,9 @@ export default function AddExpenseScreen() {
     };
   }, [scrollToShare]);
 
+  // Ô phần tiền dùng bàn phím hệ thống, nên thu NumPad lại cho bảng gọn.
   const handleShareFocus = useCallback((offsetY: number) => {
+    setNumPadOpen(false);
     focusedShareY.current = offsetY;
     scrollToShare();
   }, [scrollToShare]);
@@ -153,13 +167,57 @@ export default function AddExpenseScreen() {
     setShareTexts({});
   }, []);
 
+  const handleShowNumPad = useCallback(() => {
+    Keyboard.dismiss();
+    setNumPadOpen(true);
+  }, []);
+
+  const handleHideNumPad = useCallback(() => setNumPadOpen(false), []);
+
+  const handleToggleSplit = useCallback(() => {
+    if (splitOpen) {
+      Keyboard.dismiss();
+      setSplitOpen(false);
+      setNumPadOpen(true);
+    } else {
+      setSplitOpen(true);
+      setNumPadOpen(false);
+    }
+  }, [splitOpen]);
+
+  const handleClose = useCallback(() => {
+    if (amountText === initialAmountText) {
+      router.back();
+      return;
+    }
+    showDialog(t('common.discard_title'), t('common.discard_desc'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.discard'), style: 'destructive', onPress: () => router.back() },
+    ]);
+  }, [amountText, initialAmountText, router, showDialog, t]);
+
+  const handleDelete = useCallback(() => {
+    if (!expenseId) return;
+    showDialog(t('trip_detail.alert_delete_expense_title'), t('trip_detail.alert_delete_expense_desc'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          await removeExpense(id!, expenseId);
+          router.back();
+        },
+      },
+    ]);
+  }, [expenseId, id, removeExpense, router, showDialog, t]);
+
   const handleSubmit = useCallback(async () => {
-    const desc = description.trim();
-    if (!desc) { showDialog(t('common.error'), t('add_expense.err_no_description')); return; }
     if (amount <= 0) { showDialog(t('common.error'), t('add_payment.err_invalid_amount')); return; }
     if (!payerMember) { showDialog(t('common.error'), t('add_expense.err_no_payer')); return; }
     if (selectedMembers.length === 0) { showDialog(t('common.error'), t('add_expense.err_no_participants')); return; }
     if (sharesErrorMessage) { showDialog(t('common.error'), sharesErrorMessage); return; }
+    const desc = description.trim()
+      || autoExpenseDescription(new Date(), (time) => t('add_expense.auto_desc', { time }));
     const lockedShares = Object.keys(customShares).length > 0 ? customShares : undefined;
 
     setIsSubmitting(true);
@@ -175,80 +233,101 @@ export default function AddExpenseScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [description, amount, payerMember, selectedMembers, sharesErrorMessage, customShares, paidBy, id, expenseId, updateExpense, addExpense, router]);
+  }, [description, amount, payerMember, selectedMembers, sharesErrorMessage, customShares, paidBy, id, expenseId, updateExpense, addExpense, router, showDialog, t]);
+
+  const treasurerId = trip?.treasurerId;
+  const renderPayerChip = useCallback(({ item }: { item: Member }) => {
+    const selected = item.id === paidBy;
+    return (
+      <Pressable
+        style={[styles.chip, selected && styles.chipSelected]}
+        onPress={() => setPaidBy(item.id)}
+        accessibilityRole="radio"
+        accessibilityState={{ selected }}
+      >
+        <AppText variant="label" weight="semibold" color={selected ? colors.onPrimary : colors.textSecondary}>
+          {item.id === treasurerId ? t('add_expense.payer_fund', { name: item.name }) : item.name}
+        </AppText>
+      </Pressable>
+    );
+  }, [paidBy, treasurerId, styles, colors, t]);
 
   if (!trip) return null;
+  const currency = trip.currency ?? DEFAULT_CURRENCY;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <CustomHeader title={expenseId ? t('add_expense.update_title') : t('add_expense.title')} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
+    <BottomSheet visible onRequestClose={handleClose} scrollable={false}>
+      {/* Sheet không cuộn hộ: ScrollView riêng để cuộn tới ô phần tiền đang nhập, NumPad và nút ở
+          ngoài nên luôn nằm sát đáy. */}
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          ref={scrollRef}
-          style={styles.flex}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
+        <Pressable
+          style={styles.amount}
+          onPress={handleShowNumPad}
+          accessibilityRole="button"
+          accessibilityLabel={t('add_expense.amount_label')}
         >
-          <View style={styles.section}>
-            <Text style={styles.label}>{t('add_expense.desc_label')}</Text>
-            <TextInput
-              style={styles.input}
-              value={description}
-              onChangeText={setDescription}
-              placeholder={t('add_expense.desc_placeholder')}
-              placeholderTextColor={colors.textMuted}
-              autoFocus
-            />
-          </View>
+          <AppText
+            variant="hero"
+            weight="bold"
+            numeric
+            color={amount > 0 ? colors.text : colors.textMuted}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {formatCurrency(amount, currency)}
+          </AppText>
+        </Pressable>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>{t('add_expense.amount_label')}</Text>
-            <TextInput
-              style={[styles.input, styles.amountInput]}
-              value={amountText}
-              onChangeText={setAmountText}
-              placeholder="0"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="numeric"
-            />
-          </View>
+        <TextInput
+          style={styles.descInput}
+          value={description}
+          onChangeText={setDescription}
+          onFocus={handleHideNumPad}
+          placeholder={t('add_expense.desc_optional')}
+          placeholderTextColor={colors.textMuted}
+          returnKeyType="done"
+        />
 
-          <View style={styles.section}>
-            <Text style={styles.label}>{t('add_expense.payer_label')}</Text>
-            <TouchableOpacity
-              style={styles.dropdownTrigger}
-              onPress={() => setDropdownOpen(true)}
-              activeOpacity={0.8}
-            >
-              {payerMember ? (
-                <View style={styles.dropdownSelected}>
-                  <UserAvatar 
-                    name={payerMember.name} 
-                    isTreasurer={payerMember.id === trip.treasurerId} 
-                    size={32} 
-                  />
-                  <View style={styles.dropdownSelectedText}>
-                    <Text style={styles.dropdownValueText}>{payerMember.name}</Text>
-                    {payerMember.id === trip.treasurerId && (
-                      <Text style={styles.dropdownBadge}>{t('create_trip.treasurer')}</Text>
-                    )}
-                  </View>
-                </View>
-              ) : (
-                <Text style={styles.dropdownPlaceholder}>{t('add_expense.payer_placeholder')}</Text>
-              )}
-              <Ionicons
-                name={dropdownOpen ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color={colors.textMuted}
-              />
-            </TouchableOpacity>
-          </View>
+        <AppText variant="label" weight="semibold" color={colors.textSecondary} style={styles.sectionLabel}>
+          {t('add_expense.payer_label')}
+        </AppText>
+        <FlatList
+          horizontal
+          data={trip.members}
+          keyExtractor={(item) => item.id}
+          renderItem={renderPayerChip}
+          extraData={paidBy}
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.chips}
+        />
 
-          <View style={styles.section} onLayout={(e) => { membersY.current = e.nativeEvent.layout.y; }}>
+        <Pressable
+          style={styles.splitToggle}
+          onPress={handleToggleSplit}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: splitOpen }}
+        >
+          <AppText variant="label" weight="semibold" color={colors.textSecondary}>
+            {t('add_expense.split_label')}
+          </AppText>
+          <View style={styles.splitValue}>
+            <AppText weight="semibold" color={sharesErrorMessage ? colors.danger : colors.text}>
+              {splitLabel}
+            </AppText>
+            {(splitOpen || !isSplitAll) && (
+              <Ionicons name={splitOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.text} />
+            )}
+          </View>
+        </Pressable>
+
+        {splitOpen && (
+          <View onLayout={(e) => { membersY.current = e.nativeEvent.layout.y; }}>
             <MemberSelector
               members={trip.members}
               selected={selectedMembers}
@@ -264,109 +343,55 @@ export default function AddExpenseScreen() {
               currencyCode={trip.currency}
             />
           </View>
-        </ScrollView>
+        )}
+      </ScrollView>
 
-        <SubmitButton
-          title={isSubmitting ? t('add_expense.submitting') : (expenseId ? t('add_expense.update_btn') : t('add_expense.submit'))}
-          icon="checkmark-circle"
-          onPress={handleSubmit}
-          disabled={isSubmitting || !description.trim() || amount <= 0 || !payerMember || selectedMembers.length === 0 || sharesErrorMessage !== undefined}
-        />
-      </KeyboardAvoidingView>
-
-      {/* Dropdown Modal */}
-      <Modal
-        visible={dropdownOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDropdownOpen(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setDropdownOpen(false)}
-        >
-          <View style={[styles.dropdownMenu, { paddingBottom: insets.bottom || Spacing.lg }]}>
-            <View style={styles.dropdownHeader}>
-              <Text style={styles.dropdownTitle}>{t('add_expense.payer_placeholder')}</Text>
-              <TouchableOpacity onPress={() => setDropdownOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={24} color={colors.textMuted} />
-              </TouchableOpacity>
+      <View style={styles.footer}>
+        {numPadOpen && <NumPad value={amountText} currency={currency} onChange={setAmountText} />}
+        <View style={styles.actions}>
+          {expenseId && (
+            <View style={styles.action}>
+              <Button title={t('common.delete')} variant="danger" icon="trash-outline" onPress={handleDelete} />
             </View>
-            <FlatList
-              data={trip.members}
-              keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }: { item: { id: string; name: string } }) => (
-                <TouchableOpacity
-                  style={[styles.dropdownItem, paidBy === item.id && styles.dropdownItemSelected]}
-                  onPress={() => {
-                    setPaidBy(item.id);
-                    setDropdownOpen(false);
-                  }}
-                >
-                  <View style={styles.dropdownItemContent}>
-                    <UserAvatar 
-                      name={item.name} 
-                      isTreasurer={item.id === trip.treasurerId} 
-                      size={32} 
-                    />
-                    <View style={styles.dropdownSelectedText}>
-                      <Text style={[styles.dropdownItemText, paidBy === item.id && styles.dropdownItemTextSelected]}>
-                        {item.name}
-                      </Text>
-                      {item.id === trip.treasurerId && (
-                        <Text style={styles.dropdownBadge}>{t('create_trip.treasurer')}</Text>
-                      )}
-                    </View>
-                  </View>
-                  {paidBy === item.id && (
-                    <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              )}
+          )}
+          <View style={styles.action}>
+            <Button
+              title={t('common.save')}
+              icon="checkmark"
+              onPress={handleSubmit}
+              loading={isSubmitting}
+              disabled={amount <= 0 || !payerMember || selectedMembers.length === 0 || sharesErrorMessage !== undefined}
             />
           </View>
-        </TouchableOpacity>
-      </Modal>
-    </SafeAreaView>
+        </View>
+      </View>
+    </BottomSheet>
   );
 }
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    flex: { flex: 1 },
-    content: { padding: Spacing.lg },
-    section: { marginBottom: Spacing.xxl },
-    label: {
-      fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: colors.textSecondary,
-      textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.sm,
-    },
-    input: {
-      backgroundColor: colors.surface, borderRadius: BorderRadius.md,
+    scroll: { flexShrink: 1 },
+    amount: { alignItems: 'center', paddingBottom: Spacing.lg },
+    descInput: {
+      backgroundColor: colors.background, borderRadius: BorderRadius.md,
       paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-      fontSize: FontSize.md, color: colors.text, borderWidth: 1, borderColor: colors.border,
-    },
-    amountInput: { fontSize: FontSize.xxl, fontWeight: FontWeight.bold, textAlign: 'center' },
-    dropdownTrigger: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      backgroundColor: colors.surface, borderRadius: BorderRadius.md,
-      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+      fontSize: FontSize.md, fontFamily: FontFamily.regular, color: colors.text,
       borderWidth: 1, borderColor: colors.border,
     },
-    dropdownSelected: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-    dropdownSelectedText: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-    dropdownValueText: { fontSize: FontSize.md, color: colors.text, fontWeight: FontWeight.medium },
-    dropdownBadge: { backgroundColor: colors.accent, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontSize: FontSize.xs, color: '#fff', fontWeight: FontWeight.bold, overflow: 'hidden' },
-    dropdownPlaceholder: { fontSize: FontSize.md, color: colors.textMuted },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    dropdownMenu: { backgroundColor: colors.surface, borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl, maxHeight: '80%', paddingHorizontal: Spacing.lg },
-    dropdownHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
-    dropdownTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: colors.text },
-    dropdownItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-    dropdownItemSelected: { borderBottomColor: colors.primary },
-    dropdownItemContent: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-    dropdownItemText: { fontSize: FontSize.md, color: colors.text },
-    dropdownItemTextSelected: { fontWeight: FontWeight.bold, color: colors.primaryDark },
+    sectionLabel: { marginTop: Spacing.lg, marginBottom: Spacing.sm },
+    chips: { gap: Spacing.sm },
+    chip: {
+      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
+      borderRadius: BorderRadius.full, borderWidth: 1, borderColor: colors.border,
+    },
+    chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+    splitToggle: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingVertical: Spacing.lg,
+    },
+    splitValue: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+    footer: { gap: Spacing.lg, paddingTop: Spacing.sm },
+    actions: { flexDirection: 'row', gap: Spacing.md },
+    action: { flex: 1 },
   });

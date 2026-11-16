@@ -130,7 +130,12 @@ export default function BottomSheet({
             toValue: hiddenOffset,
             duration: CLOSE_DURATION,
             useNativeDriver: true,
-          }).start(() => closeRef.current());
+          }).start(() => {
+            closeRef.current();
+            // Cha có thể giữ sheet lại (ví dụ hỏi có bỏ số đang nhập không): trượt lên lại. Khi cha
+            // đóng thật, route unmount hoặc effect `visible` chạy hoạt ảnh đóng đè lên cái này.
+            Animated.timing(translateY, { toValue: 0, duration: OPEN_DURATION, useNativeDriver: true }).start();
+          });
         } else {
           Animated.timing(translateY, { toValue: 0, duration: CLOSE_DURATION, useNativeDriver: true }).start();
         }

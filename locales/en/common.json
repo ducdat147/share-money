@@ -2,23 +2,21 @@
 	"add_expense": {
 		"amount_label": "Amount",
 		"amount_placeholder": "0",
-		"desc_label": "Description",
-		"desc_placeholder": "e.g., Lunch, Gas...",
 		"err_fail": "Could not add expense",
-		"err_no_description": "Please enter a description",
 		"err_no_participants": "Please select at least one participant",
 		"err_no_payer": "Please select who paid",
 		"participants_label": "Participants to split",
 		"payer_label": "Paid by",
-		"payer_placeholder": "Select payer...",
-		"submit": "Add Expense",
-		"submitting": "Adding...",
-		"title": "Add Expense",
-		"update_btn": "Update",
-		"update_title": "Edit Expense",
 		"err_shares_exceed": "Locked amounts exceed the expense total",
 		"err_shares_mismatch": "Each person's amounts must add up to the expense total",
-		"err_shares_no_remainder": "Locked amounts use up the total; deselect the people who owe nothing"
+		"err_shares_no_remainder": "Locked amounts use up the total; deselect the people who owe nothing",
+		"desc_optional": "Description (optional)",
+		"auto_desc": "Expense {{time}}",
+		"payer_fund": "Fund ({{name}})",
+		"split_label": "Split between",
+		"split_all": "Everyone ({{n}}) ▾",
+		"split_some": "{{n}} selected",
+		"split_custom": "{{n}} selected · custom"
 	},
 	"add_payment": {
 		"amount_label": "Amount",
@@ -47,7 +45,10 @@
 		"error": "Error",
 		"save": "Save",
 		"settings": "Settings",
-		"warning": "Warning"
+		"warning": "Warning",
+		"discard": "Discard",
+		"discard_title": "Discard this expense?",
+		"discard_desc": "The amount you entered will not be saved."
 	},
 	"components": {
 		"backspace": "Delete digit",
