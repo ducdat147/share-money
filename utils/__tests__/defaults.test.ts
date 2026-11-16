@@ -1,5 +1,5 @@
 import { expect, test } from '@jest/globals';
-import { autoExpenseDescription, fillMemberNames, getDefaultPayerId } from '../defaults';
+import { autoExpenseDescription, fillMemberNames, findDuplicateName, getDefaultPayerId } from '../defaults';
 import { Expense, Member } from '../types';
 
 const m = (id: string): Member => ({ id, tripId: 't', name: id });
@@ -32,4 +32,14 @@ test('fillMemberNames', () => {
 });
 test('autoExpenseDescription pads time', () => {
   expect(autoExpenseDescription(new Date(2026, 0, 1, 9, 5), (t) => `Chi tiêu ${t}`)).toBe('Chi tiêu 09:05');
+});
+test('findDuplicateName: case-insensitive, trimmed', () => {
+  expect(findDuplicateName(['Minh', ' minh ', 'An'])).toBe('minh');
+});
+test('findDuplicateName: distinct names', () => {
+  expect(findDuplicateName(['Minh', 'An', 'Người 3'])).toBeUndefined();
+});
+test('findDuplicateName: typed name colliding with filled placeholder', () => {
+  const filled = fillMemberNames(['Người 2', ''], (n) => `Người ${n}`);
+  expect(findDuplicateName(filled)).toBe('Người 2');
 });
