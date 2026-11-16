@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, Pressable, KeyboardAvoidingView, Platform,
 } from 'react-native';
@@ -22,9 +22,12 @@ export default function RenameTripDialog({ visible, initialName, onCancel, onSav
   const [name, setName] = useState(initialName);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
+  // Mỗi lần mở hộp thì điền lại tên hiện tại.
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) setName(initialName);
-  }, [visible, initialName]);
+  }
 
   const trimmed = name.trim();
   const canSave = !!trimmed && trimmed !== initialName && !isSaving;

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector, PanGestureConfig, usePanGesture } from 'react-native-gesture-handler';
 import { TripSummary } from '@/utils/types';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
@@ -68,29 +68,31 @@ const TripCard: React.FC<TripCardProps> = React.memo(({ trip, onPress, onDelete 
     [swipe],
   );
 
-  const pan = useMemo(
-    () =>
-      Gesture.Pan()
-        .enabled(!!onDelete)
-        .runOnJS(true)
-        .activeOffsetX([-10, 10])
-        .failOffsetY([-10, 10])
-        .onStart(() => {
-          if (openedCard && openedCard !== swipe) snap(openedCard, false);
-          swipe.translateX.stopAnimation();
-        })
-        .onUpdate((e) => {
-          const base = swipe.isOpen ? -OPEN_OFFSET : 0;
-          swipe.translateX.setValue(Math.min(0, Math.max(-OPEN_OFFSET, base + e.translationX)));
-        })
-        .onEnd((e) => {
-          const x = (swipe.isOpen ? -OPEN_OFFSET : 0) + e.translationX;
-          const open =
-            e.velocityX < -SWIPE_VELOCITY || (e.velocityX <= SWIPE_VELOCITY && x < -OPEN_OFFSET / 2);
-          snap(swipe, open);
-        }),
+  const panConfig = useMemo<PanGestureConfig>(
+    () => ({
+      enabled: !!onDelete,
+      // Callback đụng tới Animated.Value và openedCard nên phải chạy trên JS thread.
+      disableReanimated: true,
+      activeOffsetX: [-10, 10],
+      failOffsetY: [-10, 10],
+      onActivate: () => {
+        if (openedCard && openedCard !== swipe) snap(openedCard, false);
+        swipe.translateX.stopAnimation();
+      },
+      onUpdate: (e) => {
+        const base = swipe.isOpen ? -OPEN_OFFSET : 0;
+        swipe.translateX.setValue(Math.min(0, Math.max(-OPEN_OFFSET, base + e.translationX)));
+      },
+      onDeactivate: (e) => {
+        const x = (swipe.isOpen ? -OPEN_OFFSET : 0) + e.translationX;
+        const open =
+          e.velocityX < -SWIPE_VELOCITY || (e.velocityX <= SWIPE_VELOCITY && x < -OPEN_OFFSET / 2);
+        snap(swipe, open);
+      },
+    }),
     [onDelete, swipe],
   );
+  const pan = usePanGesture(panConfig);
 
   const handleDelete = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);

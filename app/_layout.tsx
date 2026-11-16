@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, ThemeProvider, DarkTheme, DefaultTheme } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
 import * as SystemUI from 'expo-system-ui';
 import { AppState, Keyboard, Platform } from 'react-native';
-import { ThemeProvider, DarkTheme, DefaultTheme } from 'expo-router/react-navigation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useThemeStore } from '@/hooks/useThemeStore';
