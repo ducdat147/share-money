@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector, PanGestureConfig, usePanGesture } from 'react-native-gesture-handler';
 import { TripSummary } from '@/utils/types';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
-import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { ThemeColors, Spacing, BorderRadius } from '@/constants/theme';
+import { AppText, Card } from '@/components/ui';
 import { formatCurrency } from '@/utils/calculator';
 
 import ScalePressable from './ScalePressable';
@@ -45,8 +46,18 @@ interface TripCardProps {
 
 const TripCard: React.FC<TripCardProps> = React.memo(({ trip, onPress, onDelete }) => {
   const { colors } = useAppTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const subtitle = useMemo(
+    () =>
+      [
+        t('components.member_count', { count: trip.memberCount }),
+        formatCurrency(trip.totalExpense, trip.currency),
+        new Date(trip.createdAt).toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit' }),
+      ].join(' · '),
+    [t, i18n.language, trip.memberCount, trip.totalExpense, trip.currency, trip.createdAt],
+  );
 
   const [swipe] = useState<SwipeState>(() => ({ translateX: new Animated.Value(0), isOpen: false }));
 
@@ -68,29 +79,31 @@ const TripCard: React.FC<TripCardProps> = React.memo(({ trip, onPress, onDelete 
     [swipe],
   );
 
-  const pan = useMemo(
-    () =>
-      Gesture.Pan()
-        .enabled(!!onDelete)
-        .runOnJS(true)
-        .activeOffsetX([-10, 10])
-        .failOffsetY([-10, 10])
-        .onStart(() => {
-          if (openedCard && openedCard !== swipe) snap(openedCard, false);
-          swipe.translateX.stopAnimation();
-        })
-        .onUpdate((e) => {
-          const base = swipe.isOpen ? -OPEN_OFFSET : 0;
-          swipe.translateX.setValue(Math.min(0, Math.max(-OPEN_OFFSET, base + e.translationX)));
-        })
-        .onEnd((e) => {
-          const x = (swipe.isOpen ? -OPEN_OFFSET : 0) + e.translationX;
-          const open =
-            e.velocityX < -SWIPE_VELOCITY || (e.velocityX <= SWIPE_VELOCITY && x < -OPEN_OFFSET / 2);
-          snap(swipe, open);
-        }),
+  const panConfig = useMemo<PanGestureConfig>(
+    () => ({
+      enabled: !!onDelete,
+      // Callback đụng tới Animated.Value và openedCard nên phải chạy trên JS thread.
+      disableReanimated: true,
+      activeOffsetX: [-10, 10],
+      failOffsetY: [-10, 10],
+      onActivate: () => {
+        if (openedCard && openedCard !== swipe) snap(openedCard, false);
+        swipe.translateX.stopAnimation();
+      },
+      onUpdate: (e) => {
+        const base = swipe.isOpen ? -OPEN_OFFSET : 0;
+        swipe.translateX.setValue(Math.min(0, Math.max(-OPEN_OFFSET, base + e.translationX)));
+      },
+      onDeactivate: (e) => {
+        const x = (swipe.isOpen ? -OPEN_OFFSET : 0) + e.translationX;
+        const open =
+          e.velocityX < -SWIPE_VELOCITY || (e.velocityX <= SWIPE_VELOCITY && x < -OPEN_OFFSET / 2);
+        snap(swipe, open);
+      },
+    }),
     [onDelete, swipe],
   );
+  const pan = usePanGesture(panConfig);
 
   const handleDelete = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -117,59 +130,37 @@ const TripCard: React.FC<TripCardProps> = React.memo(({ trip, onPress, onDelete 
         <Animated.View style={[styles.actions, { opacity: actionOpacity }]}>
           <TouchableOpacity style={styles.swipeDelete} onPress={handleSwipeDelete} activeOpacity={0.8}>
             <Ionicons name="trash-outline" size={22} color={colors.onDanger} />
-            <Text style={styles.swipeDeleteText}>{t('common.delete')}</Text>
+            <AppText variant="label" weight="semibold" color={colors.onDanger}>
+              {t('common.delete')}
+            </AppText>
           </TouchableOpacity>
         </Animated.View>
       )}
       <GestureDetector gesture={pan}>
         <Animated.View style={{ transform: [{ translateX: swipe.translateX }] }}>
           <ScalePressable
-            style={styles.card}
             onPress={handlePress}
             haptic={Haptics.ImpactFeedbackStyle.Medium}
           >
-            <View style={styles.header}>
-              <View style={styles.titleRow}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: trip.isCompleted ? colors.textMuted : colors.success },
-                  ]}
-                />
-                <Text style={styles.title} numberOfLines={1}>
-                  {trip.name}
-                </Text>
-              </View>
-              {trip.isCompleted && (
-                <View style={styles.completedBadge}>
-                  <Text style={styles.completedText}>{t('components.badge_completed')}</Text>
+            <Card>
+              <View style={trip.isCompleted && styles.completed}>
+                <View style={styles.header}>
+                  <AppText weight="semibold" numberOfLines={1} style={styles.title}>
+                    {trip.name}
+                  </AppText>
+                  <AppText
+                    variant="label"
+                    weight="semibold"
+                    color={trip.isCompleted ? colors.textSecondary : colors.success}
+                  >
+                    {t(trip.isCompleted ? 'home.status_done' : 'home.status_active')}
+                  </AppText>
                 </View>
-              )}
-            </View>
-
-            <View style={styles.info}>
-              <View style={styles.infoItem}>
-                <Ionicons name="people-outline" size={14} color={colors.textSecondary} />
-                <Text style={styles.infoText}>{t('components.member_count', { count: trip.memberCount })}</Text>
+                <AppText variant="label" numeric color={colors.textSecondary} numberOfLines={1}>
+                  {subtitle}
+                </AppText>
               </View>
-              <View style={styles.infoItem}>
-                <Ionicons name="receipt-outline" size={14} color={colors.textSecondary} />
-                <Text style={styles.infoText}>{t('components.expense_count', { count: trip.expenseCount })}</Text>
-              </View>
-              {trip.treasurerName && (
-                <View style={styles.infoItem}>
-                  <Ionicons name="wallet-outline" size={14} color={colors.primaryLight} />
-                  <Text style={[styles.infoText, { color: colors.primaryLight }]}>
-                    {trip.treasurerName}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.footer}>
-              <Text style={styles.totalLabel}>{t('components.total_expense')}</Text>
-              <Text style={styles.totalValue}>{formatCurrency(trip.totalExpense, trip.currency)}</Text>
-            </View>
+            </Card>
           </ScalePressable>
         </Animated.View>
       </GestureDetector>
@@ -190,92 +181,26 @@ const createStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       justifyContent: 'flex-end',
     },
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: BorderRadius.lg,
-      padding: Spacing.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
+    completed: {
+      opacity: 0.6,
     },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: Spacing.md,
-    },
-    titleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 1,
-    },
-    statusDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      marginRight: Spacing.sm,
+      gap: Spacing.md,
+      marginBottom: Spacing.xs,
     },
     title: {
-      fontSize: FontSize.lg,
-      fontWeight: FontWeight.bold,
-      color: colors.onSurface,
       flex: 1,
     },
     swipeDelete: {
       width: DELETE_ACTION_WIDTH,
-      borderRadius: BorderRadius.lg,
+      borderRadius: BorderRadius.md,
       backgroundColor: colors.danger,
       justifyContent: 'center',
       alignItems: 'center',
       gap: Spacing.xs,
-    },
-    swipeDeleteText: {
-      fontSize: FontSize.sm,
-      fontWeight: FontWeight.semibold,
-      color: colors.onDanger,
-    },
-    info: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: Spacing.md,
-      marginBottom: Spacing.md,
-    },
-    infoItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.xs,
-    },
-    infoText: {
-      fontSize: FontSize.sm,
-      color: colors.onSurfaceSecondary,
-    },
-    footer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingTop: Spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-    },
-    totalLabel: {
-      fontSize: FontSize.sm,
-      color: colors.onSurfaceSecondary,
-    },
-    totalValue: {
-      fontSize: FontSize.lg,
-      fontWeight: FontWeight.bold,
-      color: colors.secondary,
-    },
-    completedBadge: {
-      backgroundColor: colors.surfaceElevated,
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: Spacing.xs,
-      borderRadius: BorderRadius.sm,
-      marginLeft: Spacing.sm,
-    },
-    completedText: {
-      fontSize: FontSize.xs,
-      color: colors.onSurfaceMuted,
-      fontWeight: FontWeight.medium,
     },
   });
 

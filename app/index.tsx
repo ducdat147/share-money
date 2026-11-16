@@ -1,33 +1,30 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
-  Modal,
-  Pressable,
   Animated,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { SUMMARY_PAGE_SIZE, useTripStore } from '@/hooks/useTripStore';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { TripSummary } from '@/utils/types';
 import TripCard from '@/components/TripCard';
 import { useDialog } from '@/components/DialogProvider';
-import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { AppText, Button, FAB } from '@/components/ui';
+import { ThemeColors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
 
 import ScalePressable from '@/components/ScalePressable';
 import * as Haptics from 'expo-haptics';
 
 const AnimatedListItem = ({ children, index }: { children: React.ReactNode; index: number }) => {
-  const animatedValue = React.useRef(new Animated.Value(0)).current;
+  const [animatedValue] = React.useState(() => new Animated.Value(0));
 
   React.useEffect(() => {
     Animated.timing(animatedValue, {
@@ -37,7 +34,7 @@ const AnimatedListItem = ({ children, index }: { children: React.ReactNode; inde
       delay: Math.min(index, 5) * 100,
       useNativeDriver: true,
     }).start();
-  }, [index]);
+  }, [animatedValue, index]);
 
   const translateY = animatedValue.interpolate({
     inputRange: [0, 1],
@@ -63,13 +60,11 @@ export default function HomeScreen() {
     deleteTrip,
   } = useTripStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [menuVisible, setMenuVisible] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const isNavigatingRef = useRef(false);
   const isSearchingRef = useRef(false);
-  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { colors, isDark } = useAppTheme();
+  const { colors } = useAppTheme();
   const { showDialog } = useDialog();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -86,6 +81,10 @@ export default function HomeScreen() {
       ).finally(() => setHasLoadedOnce(true));
     }, [loadTripSummaries]),
   );
+
+  // Search box only shows from 5 trips up; drop a stale query when it hides.
+  const showSearch = tripCounts.total >= 5;
+  if (!showSearch && searchQuery) setSearchQuery('');
 
   useEffect(() => {
     const searching = searchQuery.trim().length > 0;
@@ -172,38 +171,21 @@ export default function HomeScreen() {
         <View style={styles.emptyIconContainer}>
           <Ionicons name="airplane-outline" size={48} color={colors.textMuted} />
         </View>
-        <Text style={styles.emptyTitle}>{t('home.empty_title')}</Text>
-        <Text style={styles.emptySubtitle}>{t('home.empty_desc')}</Text>
+        <AppText variant="title" weight="bold" style={styles.emptyTitle}>
+          {t('home.empty_title')}
+        </AppText>
+        <AppText color={colors.textSecondary} style={styles.emptySubtitle}>
+          {t('home.empty_desc')}
+        </AppText>
+        {searchQuery.trim().length === 0 && (
+          <View style={styles.emptyAction}>
+            <Button title={t('home.add_trip')} icon="add" onPress={handleCreateTrip} />
+          </View>
+        )}
       </View>
     ),
-    [searchQuery, t, styles, colors],
+    [searchQuery, handleCreateTrip, t, styles, colors],
   );
-
-  const menuItems = useMemo(
-    () => [
-      {
-        icon: 'settings-outline' as const,
-        label: t('common.settings'),
-        onPress: () => {
-          setMenuVisible(false);
-          router.push('/settings');
-        },
-      },
-      {
-        icon: 'information-circle-outline' as const,
-        label: t('common.about'),
-        onPress: () => {
-          setMenuVisible(false);
-          showDialog(
-            'Share Money',
-            t('home.about_desc'),
-          );
-        },
-      },
-    ],
-    [router, t, showDialog],
-  );
-
 
   // Only the very first load takes over the screen — later refreshes keep the
   // list (and the FAB) mounted so taps are never swallowed by the spinner.
@@ -217,17 +199,22 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header with hamburger and search */}
       <View style={styles.headerContainer}>
         <View style={styles.headerTop}>
+          <AppText variant="title" weight="bold">
+            {t('home.title')}
+          </AppText>
           <ScalePressable
-            onPress={() => setMenuVisible(true)}
-            style={styles.hamburgerBtn}
+            onPress={() => router.push('/settings')}
+            style={styles.settingsBtn}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.settings')}
           >
-            <Ionicons name="menu" size={26} color={colors.onBackground} />
+            <Ionicons name="settings-outline" size={24} color={colors.text} />
           </ScalePressable>
-          
+        </View>
+        {showSearch && (
           <View style={styles.searchContainer}>
             <Ionicons
               name="search"
@@ -252,7 +239,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             )}
           </View>
-        </View>
+        )}
       </View>
 
       <FlatList
@@ -267,72 +254,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <ScalePressable
-        style={[styles.fab, { bottom: Spacing.xxl + insets.bottom }]}
-        onPress={handleCreateTrip}
-        haptic={Haptics.ImpactFeedbackStyle.Heavy}
-      >
-        <Ionicons name="add" size={28} color={colors.onPrimary} />
-      </ScalePressable>
-
-      {/* Hamburger Menu Modal */}
-      <Modal
-        visible={menuVisible}
-        transparent
-        statusBarTranslucent
-        navigationBarTranslucent
-        // Cửa sổ Modal mở ra với icon status bar màu trắng, kể cả ở light mode, nên đặt lại sau khi hiện.
-        onShow={() => StatusBar.setStyle(isDark ? 'light' : 'dark')}
-        animationType="fade"
-        onRequestClose={() => setMenuVisible(false)}
-      >
-        <Pressable
-          style={styles.menuOverlay}
-          onPress={() => setMenuVisible(false)}
-        >
-          <View style={styles.menuPanel}>
-            {/* Menu Header */}
-            <View style={styles.menuHeader}>
-              <View style={styles.menuLogoContainer}>
-                <Ionicons name="wallet" size={24} color={colors.primary} />
-              </View>
-              <View>
-                <Text style={styles.menuAppName}>Share Money</Text>
-                <Text style={styles.menuAppVersion}>v1.0.0</Text>
-              </View>
-            </View>
-
-            <View style={styles.menuDivider} />
-
-            {/* Menu Items */}
-            {menuItems.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.menuItem}
-                onPress={item.onPress}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={item.icon}
-                  size={22}
-                  color={colors.textSecondary}
-                />
-                <Text style={styles.menuItemText}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-
-            <View style={styles.menuDivider} />
-
-            {/* Stats */}
-            <View style={styles.menuStats}>
-              <Text style={styles.menuStatsText}>
-                {t('home.stats_trips', { count: tripCounts.total })} •{' '}
-                {t('home.stats_active', { count: tripCounts.active })}
-              </Text>
-            </View>
-          </View>
-        </Pressable>
-      </Modal>
+      <FAB label={t('home.new_trip')} onPress={handleCreateTrip} />
     </SafeAreaView>
   );
 }
@@ -354,20 +276,19 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: Spacing.lg,
       paddingTop: Spacing.sm,
       paddingBottom: Spacing.sm,
+      gap: Spacing.md,
     },
     headerTop: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: Spacing.md,
+      justifyContent: 'space-between',
     },
-    hamburgerBtn: {
+    settingsBtn: {
       justifyContent: 'center',
       alignItems: 'center',
-      paddingRight: Spacing.xs,
     },
     // Search
     searchContainer: {
-      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: colors.surface,
@@ -388,6 +309,8 @@ const createStyles = (colors: ThemeColors) =>
     // List
     listContent: {
       paddingHorizontal: Spacing.lg,
+      // Clear the FAB so the last card is not hidden under it.
+      paddingBottom: Spacing.xxl * 3,
       flexGrow: 1,
     },
     footerLoading: {
@@ -410,91 +333,12 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: Spacing.xl,
     },
     emptyTitle: {
-      fontSize: FontSize.xl,
-      fontWeight: FontWeight.bold,
-      color: colors.onBackground,
       marginBottom: Spacing.sm,
     },
     emptySubtitle: {
-      fontSize: FontSize.md,
-      color: colors.onSurfaceSecondary,
       textAlign: 'center',
     },
-    fab: {
-      position: 'absolute',
-      bottom: Spacing.xxl,
-      right: Spacing.xl,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: colors.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      elevation: 8,
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.4,
-      shadowRadius: 8,
-    },
-    // Menu Modal
-    menuOverlay: {
-      flex: 1,
-      backgroundColor: colors.overlay,
-      justifyContent: 'flex-start',
-    },
-    menuPanel: {
-      width: '75%',
-      height: '100%',
-      backgroundColor: colors.surface,
-      paddingTop: 60,
-      paddingHorizontal: Spacing.xl,
-      paddingBottom: Spacing.xl,
-    },
-    menuHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.md,
-      marginBottom: Spacing.lg,
-    },
-    menuLogoContainer: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: colors.surfaceElevated,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    menuAppName: {
-      fontSize: FontSize.xl,
-      fontWeight: FontWeight.extrabold,
-      color: colors.onSurface,
-    },
-    menuAppVersion: {
-      fontSize: FontSize.sm,
-      color: colors.onSurfaceMuted,
-    },
-    menuDivider: {
-      height: 1,
-      backgroundColor: colors.border,
-      marginVertical: Spacing.md,
-    },
-    menuItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.lg,
-      paddingVertical: Spacing.md,
-      borderRadius: BorderRadius.md,
-    },
-    menuItemText: {
-      fontSize: FontSize.md,
-      color: colors.onSurface,
-      fontWeight: FontWeight.medium,
-    },
-    menuStats: {
-      paddingVertical: Spacing.sm,
-    },
-    menuStatsText: {
-      fontSize: FontSize.sm,
-      color: colors.onSurfaceSecondary,
+    emptyAction: {
+      marginTop: Spacing.xl,
     },
   });

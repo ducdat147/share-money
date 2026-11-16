@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Animated,
   GestureResponderEvent,
@@ -31,7 +31,7 @@ const ScalePressable: React.FC<ScalePressableProps> = ({
   haptic = Haptics.ImpactFeedbackStyle.Light,
   ...props
 }) => {
-  const scale = useRef(new Animated.Value(1)).current;
+  const [scale] = useState(() => new Animated.Value(1));
 
   const handlePressIn = (event: GestureResponderEvent) => {
     if (haptic) {

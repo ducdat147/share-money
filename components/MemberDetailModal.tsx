@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,24 @@ import {
   Platform,
   Animated,
   Pressable,
+  Keyboard,
+  Dimensions,
 } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { Member } from '@/utils/types';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { useTranslation } from 'react-i18next';
-import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
 import { CurrencyCode, parseAmountInput } from '@/utils/currency';
 import UserAvatar from './UserAvatar';
+
+// Bản build bật edge-to-edge nên cửa sổ Dialog của Modal không co lại khi bàn phím mở
+// (adjustResize mất tác dụng), sheet nằm dưới bàn phím. Expo Go tắt edge-to-edge, cửa sổ tự co,
+// nên chỉ tự đẩy sheet lên ở bản build.
+const liftForKeyboard =
+  Platform.OS === 'android' &&
+  Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
 
 interface MemberDetailModalProps {
   visible: boolean;
@@ -31,6 +41,8 @@ interface MemberDetailModalProps {
   onUpdateName: (name: string) => Promise<void>;
   onToggleTreasurer: () => Promise<void>;
   onAddFund: (amount: number) => Promise<void>;
+  /** Không truyền thì ẩn nút xoá, ví dụ chuyến đã xong. */
+  onRemove?: () => void;
 }
 
 export default function MemberDetailModal({
@@ -44,22 +56,38 @@ export default function MemberDetailModal({
   onUpdateName,
   onToggleTreasurer,
   onAddFund,
+  onRemove,
 }: MemberDetailModalProps) {
   const { colors } = useAppTheme();
   const { t } = useTranslation();
   const styles = createStyles(colors);
 
-  const [name, setName] = useState('');
+  const [name, setName] = useState(member?.name ?? '');
   const [fundAmount, setFundAmount] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showModal, setShowModal] = useState(visible);
 
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const contentTranslateY = useRef(new Animated.Value(400)).current;
+  const [overlayOpacity] = useState(() => new Animated.Value(0));
+  const [contentTranslateY] = useState(() => new Animated.Value(400));
+  const [keyboardOffset] = useState(() => new Animated.Value(0));
+  // Dùng transform để không đổi layout: đổi padding/height trên Android làm ô nhập mất focus.
+  const [sheetTranslateY] = useState(() => Animated.add(contentTranslateY, keyboardOffset));
+
+  // Mount Modal ngay khi mở; effect bên dưới chạy animation, đóng xong mới unmount.
+  if (visible && !showModal) setShowModal(true);
+
+  // Đổi thành viên, hoặc store nạp lại thành viên này, thì điền lại form.
+  const [prevMember, setPrevMember] = useState(member);
+  if (member !== prevMember) {
+    setPrevMember(member);
+    if (member) {
+      setName(member.name);
+      setFundAmount('');
+    }
+  }
 
   useEffect(() => {
     if (visible) {
-      setShowModal(true);
       Animated.parallel([
         Animated.timing(overlayOpacity, {
           toValue: 1,
@@ -89,18 +117,25 @@ export default function MemberDetailModal({
         setShowModal(false);
       });
     }
-  }, [visible]);
+  }, [visible, overlayOpacity, contentTranslateY]);
+
+  useEffect(() => {
+    if (!liftForKeyboard) return;
+    const subs = [
+      // Không dùng endCoordinates.height: Android trừ chiều cao thanh điều hướng khỏi số đó, mà
+      // Dialog edge-to-edge kéo tới tận đáy màn hình, nên sheet thiếu đúng phần đó và che nút Lưu.
+      // screenY là mép trên bàn phím tính từ đỉnh màn hình.
+      Keyboard.addListener('keyboardDidShow', (e) =>
+        keyboardOffset.setValue(Math.min(0, e.endCoordinates.screenY - Dimensions.get('screen').height)),
+      ),
+      Keyboard.addListener('keyboardDidHide', () => keyboardOffset.setValue(0)),
+    ];
+    return () => subs.forEach((s) => s.remove());
+  }, [keyboardOffset]);
 
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
-
-  useEffect(() => {
-    if (member) {
-      setName(member.name);
-      setFundAmount('');
-    }
-  }, [member]);
 
   const handleSave = async () => {
     if (!member) return;
@@ -130,10 +165,10 @@ export default function MemberDetailModal({
           <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]} />
         </Pressable>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardView}
         >
-          <Animated.View style={[styles.content, { transform: [{ translateY: contentTranslateY }] }]}>
+          <Animated.View style={[styles.content, { transform: [{ translateY: sheetTranslateY }] }]}>
             <View style={styles.header}>
               <Text style={styles.title}>{t('member_detail.title')}</Text>
               <TouchableOpacity onPress={handleClose}>
@@ -207,6 +242,13 @@ export default function MemberDetailModal({
                 {isSaving ? t('common.submitting') : t('common.save')}
               </Text>
             </TouchableOpacity>
+
+            {onRemove && (
+              <TouchableOpacity style={styles.removeBtn} onPress={onRemove} disabled={isSaving}>
+                <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                <Text style={styles.removeBtnText}>{t('member_detail.remove')}</Text>
+              </TouchableOpacity>
+            )}
           </Animated.View>
         </KeyboardAvoidingView>
       </View>
@@ -244,7 +286,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     title: {
       fontSize: FontSize.lg,
-      fontWeight: FontWeight.bold,
+      fontFamily: FontFamily.bold,
       color: colors.text,
     },
     avatarSection: {
@@ -258,13 +300,14 @@ const createStyles = (colors: ThemeColors) =>
     },
     label: {
       fontSize: FontSize.sm,
-      fontWeight: FontWeight.bold,
+      fontFamily: FontFamily.bold,
       color: colors.textSecondary,
       marginBottom: Spacing.xs,
       textTransform: 'uppercase',
     },
     hint: {
       fontSize: FontSize.xs,
+      fontFamily: FontFamily.regular,
       color: colors.textMuted,
       marginBottom: Spacing.sm,
     },
@@ -274,6 +317,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: Spacing.md,
       paddingVertical: Spacing.sm,
       fontSize: FontSize.md,
+      fontFamily: FontFamily.regular,
       color: colors.text,
       borderWidth: 1,
       borderColor: colors.border,
@@ -299,6 +343,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     lockedHint: {
       fontSize: FontSize.sm,
+      fontFamily: FontFamily.regular,
       color: colors.textMuted,
       marginBottom: Spacing.xl,
     },
@@ -309,7 +354,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     optionText: {
       fontSize: FontSize.md,
-      fontWeight: FontWeight.semibold,
+      fontFamily: FontFamily.semibold,
       color: colors.text,
     },
     optionTextActive: {
@@ -329,7 +374,20 @@ const createStyles = (colors: ThemeColors) =>
     },
     saveBtnText: {
       fontSize: FontSize.md,
-      fontWeight: FontWeight.bold,
+      fontFamily: FontFamily.bold,
       color: colors.onPrimary,
+    },
+    removeBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.sm,
+      paddingVertical: Spacing.md,
+      marginTop: Spacing.sm,
+    },
+    removeBtnText: {
+      fontSize: FontSize.md,
+      fontFamily: FontFamily.semibold,
+      color: colors.danger,
     },
   });

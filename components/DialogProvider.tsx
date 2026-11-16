@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { useAppTheme } from '@/hooks/useAppTheme';
-import { ThemeColors, Spacing, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
 
 interface DialogButton {
   text: string;
@@ -106,12 +106,13 @@ const createStyles = (colors: ThemeColors) =>
     },
     title: {
       fontSize: FontSize.lg,
-      fontWeight: FontWeight.bold,
+      fontFamily: FontFamily.bold,
       color: colors.text,
       marginBottom: Spacing.sm,
     },
     message: {
       fontSize: FontSize.md,
+      fontFamily: FontFamily.regular,
       color: colors.textSecondary,
       lineHeight: 22,
       marginBottom: Spacing.xl,
@@ -137,7 +138,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     buttonText: {
       fontSize: FontSize.md,
-      fontWeight: FontWeight.semibold,
+      fontFamily: FontFamily.semibold,
     },
     cancelText: {
       color: colors.textSecondary,
