@@ -16,7 +16,7 @@
       "package": "com.ducdat.sharemoney",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#FF5733"
+        "backgroundColor": "#4D7C0F"
       }
     },
     "web": {
@@ -32,7 +32,10 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#FF5733"
+          "backgroundColor": "#F5F3EC",
+          "dark": {
+            "backgroundColor": "#14140F"
+          }
         }
       ],
       [
