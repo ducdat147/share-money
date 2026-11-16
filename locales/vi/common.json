@@ -52,6 +52,10 @@
 		"warning": "Cảnh báo"
 	},
 	"components": {
+		"backspace": "Xoá chữ số",
+		"decrease": "Giảm",
+		"increase": "Tăng",
+		"more_options": "Thêm tuỳ chọn",
 		"badge_active": "Đang diễn ra",
 		"badge_completed": "Đã kết thúc",
 		"deselect_all": "Bỏ chọn tất cả",
