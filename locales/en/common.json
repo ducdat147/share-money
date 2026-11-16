@@ -52,6 +52,10 @@
 		"warning": "Warning"
 	},
 	"components": {
+		"backspace": "Delete digit",
+		"decrease": "Decrease",
+		"increase": "Increase",
+		"more_options": "More options",
 		"badge_active": "Active",
 		"badge_completed": "Completed",
 		"deselect_all": "Deselect all",

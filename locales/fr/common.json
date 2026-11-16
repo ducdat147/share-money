@@ -52,6 +52,10 @@
 		"warning": "Attention"
 	},
 	"components": {
+		"backspace": "Effacer le chiffre",
+		"decrease": "Diminuer",
+		"increase": "Augmenter",
+		"more_options": "Plus d'options",
 		"badge_active": "En cours",
 		"badge_completed": "Terminé",
 		"deselect_all": "Tout désélectionner",
