@@ -130,8 +130,9 @@ export default function SummaryScreen() {
 
   const s = summaries.find((item) => item.memberId === selectedMemberId);
   // The treasurer's debt only covers their own share; what they owe the group also
-  // includes the other members' cash they still hold.
-  const owed = s ? (s.memberId === treasurer?.id ? -s.balance : s.debt) : 0;
+  // includes the other members' cash they still hold. Without a treasurer debt stays 0, so the
+  // balance is the only measure of what a member owes or gets back.
+  const owed = s ? (s.memberId === treasurer?.id || !trip.treasurerId ? -s.balance : s.debt) : 0;
   const treasurerNet = treasurerSummary ? -treasurerSummary.balance : 0;
 
   const listHeader = (
