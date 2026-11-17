@@ -17,3 +17,5 @@ export { default as SegmentedControl } from './SegmentedControl';
 export type { SegmentedControlProps } from './SegmentedControl';
 export { default as Stepper } from './Stepper';
 export type { StepperProps } from './Stepper';
+export { default as SwipeableRow } from './SwipeableRow';
+export type { SwipeAction, SwipeableRowProps } from './SwipeableRow';

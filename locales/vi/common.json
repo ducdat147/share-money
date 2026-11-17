@@ -30,7 +30,6 @@
 		"submit_empty": "Nhận tiền"
 	},
 	"common": {
-		"about": "Thông tin ứng dụng",
 		"cancel": "Hủy",
 		"close": "Đóng",
 		"confirm": "Xác nhận",
@@ -74,11 +73,11 @@
 		"trip_name_placeholder": "Ví dụ: Đà Lạt 2026"
 	},
 	"home": {
-		"about_desc": "Ứng dụng chia tiền chuyến đi\nPhiên bản 1.0.0",
 		"add_trip": "Tạo chuyến đi",
 		"empty_desc": "Hãy tạo chuyến đi đầu tiên để bắt đầu!",
 		"empty_title": "Chưa có chuyến đi nào",
 		"new_trip": "Chuyến đi",
+		"rename": "Đổi tên",
 		"search_placeholder": "Tìm chuyến đi...",
 		"status_active": "Đang đi",
 		"status_done": "Đã xong",
@@ -103,10 +102,12 @@
 		"language_en": "English",
 		"language_fr": "Français",
 		"language_vi": "Tiếng Việt",
+		"tagline": "Ứng dụng chia tiền chuyến đi",
 		"theme_dark": "Tối",
 		"theme_light": "Sáng",
 		"theme_system": "Theo hệ thống",
-		"title": "Cài đặt"
+		"title": "Cài đặt",
+		"version": "Share Money · {{version}}"
 	},
 	"summary": {
 		"advanced_paid_label": "Tiền tự chi trả",

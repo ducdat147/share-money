@@ -17,7 +17,7 @@ import RenameTripDialog from '@/components/RenameTripDialog';
 import ScalePressable from '@/components/ScalePressable';
 import { useDialog } from '@/components/DialogProvider';
 import {
-  ActionMenu, ActionMenuItem, AppText, BottomSheet, Button, Card, FAB, ListRow, SegmentedControl,
+  ActionMenu, ActionMenuItem, AppText, BottomSheet, Button, Card, FAB, ListRow, SegmentedControl, SwipeableRow,
 } from '@/components/ui';
 import { useTranslation } from 'react-i18next';
 import { ThemeColors, Spacing, BorderRadius, FontSize, FontFamily } from '@/constants/theme';
@@ -38,6 +38,7 @@ export default function TripDetailScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const {
     trips, loadTrip, completeTrip, deleteTrip, addMember, removeMember, updateTreasurer, updateMemberName, addPayment, updateTripName,
+    removeExpense, removePayment,
   } = useTripStore();
 
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
@@ -81,6 +82,44 @@ export default function TripDetailScreen() {
     (paymentId: string) => {
       router.push(`/trip/${id}/add-payment?paymentId=${paymentId}`);
     }, [id, router],
+  );
+
+  const handleDeleteExpense = useCallback(
+    (expenseId: string) => {
+      showDialog(t('trip_detail.alert_delete_expense_title'), t('trip_detail.alert_delete_expense_desc'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeExpense(id!, expenseId);
+            } catch {
+              showDialog(t('common.error'), t('add_expense.err_fail'));
+            }
+          },
+        },
+      ]);
+    }, [id, removeExpense, showDialog, t],
+  );
+
+  const handleDeletePayment = useCallback(
+    (paymentId: string) => {
+      showDialog(t('trip_detail.alert_delete_payment_title'), t('trip_detail.alert_delete_payment_desc'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removePayment(id!, paymentId);
+            } catch {
+              showDialog(t('common.error'), t('add_payment.err_fail'));
+            }
+          },
+        },
+      ]);
+    }, [id, removePayment, showDialog, t],
   );
 
   const openAddMember = useCallback(() => {
@@ -241,7 +280,13 @@ export default function TripDetailScreen() {
 
   const renderExpense = useCallback(
     ({ item }: { item: Expense }) => (
-      <View style={styles.rowCard}>
+      <SwipeableRow
+        style={styles.rowCard}
+        actions={[
+          { label: t('common.delete'), icon: 'trash-outline', tone: 'danger', onPress: () => handleDeleteExpense(item.id) },
+        ]}
+        enabled={!trip?.isCompleted}
+      >
         <ExpenseItem
           expense={item}
           members={trip?.members ?? []}
@@ -249,21 +294,27 @@ export default function TripDetailScreen() {
           onEdit={trip?.isCompleted ? undefined : () => handleEditExpense(item.id)}
           currencyCode={trip?.currency}
         />
-      </View>
-    ), [trip, handleEditExpense, styles],
+      </SwipeableRow>
+    ), [trip, handleEditExpense, handleDeleteExpense, styles, t],
   );
 
   const renderPayment = useCallback(
     ({ item }: { item: Payment }) => (
-      <View style={styles.rowCard}>
+      <SwipeableRow
+        style={styles.rowCard}
+        actions={[
+          { label: t('common.delete'), icon: 'trash-outline', tone: 'danger', onPress: () => handleDeletePayment(item.id) },
+        ]}
+        enabled={!trip?.isCompleted}
+      >
         <PaymentItem
           payment={item}
           members={trip?.members ?? []}
           onEdit={trip?.isCompleted ? undefined : () => handleEditPayment(item.id)}
           currencyCode={trip?.currency}
         />
-      </View>
-    ), [trip, handleEditPayment, styles],
+      </SwipeableRow>
+    ), [trip, handleEditPayment, handleDeletePayment, styles, t],
   );
 
   const renderMember = useCallback(

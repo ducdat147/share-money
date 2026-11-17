@@ -30,7 +30,6 @@
 		"submit_empty": "Recevoir la cotisation"
 	},
 	"common": {
-		"about": "À propos",
 		"cancel": "Annuler",
 		"close": "Fermer",
 		"confirm": "Confirmer",
@@ -74,11 +73,11 @@
 		"trip_name_placeholder": "Ex. : Vacances d'été"
 	},
 	"home": {
-		"about_desc": "Application de partage des dépenses de voyage\nVersion 1.0.0",
 		"add_trip": "Créer un voyage",
 		"empty_desc": "Créez votre premier voyage pour commencer !",
 		"empty_title": "Aucun voyage pour le moment",
 		"new_trip": "Nouveau voyage",
+		"rename": "Renommer",
 		"search_placeholder": "Rechercher un voyage...",
 		"status_active": "En cours",
 		"status_done": "Terminé",
@@ -103,10 +102,12 @@
 		"language_en": "English",
 		"language_fr": "Français",
 		"language_vi": "Tiếng Việt",
+		"tagline": "Application de partage des dépenses de voyage",
 		"theme_dark": "Sombre",
 		"theme_light": "Clair",
 		"theme_system": "Système",
-		"title": "Paramètres"
+		"title": "Paramètres",
+		"version": "Share Money · {{version}}"
 	},
 	"summary": {
 		"advanced_paid_label": "Payé directement",

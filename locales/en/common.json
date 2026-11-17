@@ -30,7 +30,6 @@
 		"submit_empty": "Receive Fund"
 	},
 	"common": {
-		"about": "About App",
 		"cancel": "Cancel",
 		"close": "Close",
 		"confirm": "Confirm",
@@ -74,11 +73,11 @@
 		"trip_name_placeholder": "e.g., Summer Vacation"
 	},
 	"home": {
-		"about_desc": "Trip expense sharing application\nVersion 1.0.0",
 		"add_trip": "Create Trip",
 		"empty_desc": "Create your first trip to get started!",
 		"empty_title": "No trips yet",
 		"new_trip": "New trip",
+		"rename": "Rename",
 		"search_placeholder": "Search trips...",
 		"status_active": "Active",
 		"status_done": "Done",
@@ -103,10 +102,12 @@
 		"language_en": "English",
 		"language_fr": "Français",
 		"language_vi": "Tiếng Việt",
+		"tagline": "Trip expense sharing app",
 		"theme_dark": "Dark",
 		"theme_light": "Light",
 		"theme_system": "System",
-		"title": "Settings"
+		"title": "Settings",
+		"version": "Share Money · {{version}}"
 	},
 	"summary": {
 		"advanced_paid_label": "Directly paid",

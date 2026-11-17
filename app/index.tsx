@@ -16,6 +16,7 @@ import { SUMMARY_PAGE_SIZE, useTripStore } from '@/hooks/useTripStore';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { TripSummary } from '@/utils/types';
 import TripCard from '@/components/TripCard';
+import RenameTripDialog from '@/components/RenameTripDialog';
 import { useDialog } from '@/components/DialogProvider';
 import { AppText, Button, FAB } from '@/components/ui';
 import { ThemeColors, Spacing, BorderRadius, FontSize } from '@/constants/theme';
@@ -58,9 +59,11 @@ export default function HomeScreen() {
     loadTripSummaries,
     loadMoreSummaries,
     deleteTrip,
+    updateTripName,
   } = useTripStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [renamingTrip, setRenamingTrip] = useState<TripSummary | null>(null);
   const isNavigatingRef = useRef(false);
   const isSearchingRef = useRef(false);
   const { t } = useTranslation();
@@ -134,6 +137,24 @@ export default function HomeScreen() {
     [deleteTrip, t, showDialog],
   );
 
+  const handleRename = useCallback(
+    async (name: string) => {
+      if (!renamingTrip) return;
+      try {
+        await updateTripName(renamingTrip.id, name);
+        setRenamingTrip(null);
+        // updateTripName chỉ nạp lại chi tiết chuyến đi; danh sách ở đây là bản tóm tắt nên nạp lại riêng.
+        const loaded = useTripStore.getState().tripSummaries.length;
+        await loadTripSummaries(isSearchingRef.current ? 'all' : Math.max(SUMMARY_PAGE_SIZE, loaded));
+      } catch {
+        // Đóng hộp đổi tên trước: mở hộp thoại chồng lên một Modal khác dễ không hiện trên iOS.
+        setRenamingTrip(null);
+        showDialog(t('common.error'), t('trip_detail.err_rename'));
+      }
+    },
+    [renamingTrip, updateTripName, loadTripSummaries, showDialog, t],
+  );
+
   const handleEndReached = useCallback(() => {
     // While searching everything is already loaded; paging would fight the filter.
     if (isSearchingRef.current) return;
@@ -146,6 +167,8 @@ export default function HomeScreen() {
         <TripCard
           trip={item}
           onPress={() => handleOpenTrip(item.id)}
+          // Chuyến đã kết thúc thì không đổi tên, giống menu trong màn chuyến đi.
+          onRename={item.isCompleted ? undefined : () => setRenamingTrip(item)}
           onDelete={() => handleDeleteTrip(item.id, item.name)}
         />
       </AnimatedListItem>
@@ -255,6 +278,13 @@ export default function HomeScreen() {
       />
 
       <FAB label={t('home.new_trip')} onPress={handleCreateTrip} />
+
+      <RenameTripDialog
+        visible={renamingTrip !== null}
+        initialName={renamingTrip?.name ?? ''}
+        onCancel={() => setRenamingTrip(null)}
+        onSave={handleRename}
+      />
     </SafeAreaView>
   );
 }
