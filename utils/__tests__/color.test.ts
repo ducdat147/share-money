@@ -13,6 +13,7 @@ test.each([['light', LightColors], ['dark', DarkColors]])(
     expect(contrastRatio(c.danger, c.surface)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(c.text, c.background)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(c.onPrimary, c.primary)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(c.onAvatar, c.avatar)).toBeGreaterThanOrEqual(4.5);
   },
 );
 

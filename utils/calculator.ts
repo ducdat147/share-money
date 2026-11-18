@@ -293,23 +293,6 @@ export function getTotalPayments(payments: Payment[]): number {
   return payments.reduce((sum, p) => sum + p.amount, 0);
 }
 
-const AVATAR_COLORS = [
-  '#FF5733', '#33FF57', '#3357FF', '#F333FF', '#33FFF3',
-  '#FF3385', '#FF8533', '#8533FF', '#33FF85', '#5733FF',
-];
-
-export function getAvatarColor(name: string): string {
-  if (!name) return '#95A5A6';
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[index];
-}
-
-export const getMemberColor = getAvatarColor;
-
 export function getInitials(name: string): string {
   if (!name) return '?';
   const parts = name.trim().split(/\s+/);

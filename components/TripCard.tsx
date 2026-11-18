@@ -40,32 +40,36 @@ const TripCard: React.FC<TripCardProps> = React.memo(({ trip, onPress, onRename,
   }, [onRename, onDelete, t]);
 
   return (
-    <SwipeableRow style={styles.container} actions={actions} enabled={actions.length > 0}>
-      <ScalePressable
-        onPress={onPress}
-        haptic={Haptics.ImpactFeedbackStyle.Medium}
-      >
-        <Card>
-          <View style={trip.isCompleted && styles.completed}>
-            <View style={styles.header}>
-              <AppText weight="semibold" numberOfLines={1} style={styles.title}>
-                {trip.name}
-              </AppText>
-              <AppText
-                variant="label"
-                weight="semibold"
-                color={trip.isCompleted ? colors.textSecondary : colors.success}
-              >
-                {t(trip.isCompleted ? 'home.status_done' : 'home.status_active')}
+    <View style={styles.container}>
+      <SwipeableRow actions={actions} enabled={actions.length > 0}>
+        <ScalePressable
+          onPress={onPress}
+          haptic={Haptics.ImpactFeedbackStyle.Medium}
+        >
+          {/* Viền và bo góc nằm ở khung ngoài, để thẻ ghép phẳng với dải nút khi vuốt. */}
+          <Card style={styles.card}>
+            <View style={trip.isCompleted && styles.completed}>
+              <View style={styles.header}>
+                <AppText weight="semibold" numberOfLines={1} style={styles.title}>
+                  {trip.name}
+                </AppText>
+                <AppText
+                  variant="label"
+                  weight="semibold"
+                  color={trip.isCompleted ? colors.textSecondary : colors.success}
+                >
+                  {t(trip.isCompleted ? 'home.status_done' : 'home.status_active')}
+                </AppText>
+              </View>
+              <AppText variant="label" numeric color={colors.textSecondary} numberOfLines={1}>
+                {subtitle}
               </AppText>
             </View>
-            <AppText variant="label" numeric color={colors.textSecondary} numberOfLines={1}>
-              {subtitle}
-            </AppText>
-          </View>
-        </Card>
-      </ScalePressable>
-    </SwipeableRow>
+          </Card>
+        </ScalePressable>
+      </SwipeableRow>
+      <View style={styles.border} pointerEvents="none" />
+    </View>
   );
 });
 
@@ -77,6 +81,16 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: Spacing.md,
       borderRadius: BorderRadius.md,
       overflow: 'hidden',
+    },
+    card: {
+      borderWidth: 0,
+      borderRadius: 0,
+    },
+    border: {
+      ...StyleSheet.absoluteFill,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: BorderRadius.md,
     },
     completed: {
       opacity: 0.6,

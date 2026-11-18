@@ -5,7 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import Constants from 'expo-constants';
 import CustomHeader from '@/components/CustomHeader';
-import { AppText, BottomSheet, Card, ListRow, SegmentedControl } from '@/components/ui';
+import { AppText, BottomSheet, Card, ListRow } from '@/components/ui';
+import type { IoniconName } from '@/components/ui';
 import { useAppTheme } from '@/hooks/useAppTheme';
 import { ThemeColors, ThemeMode, Spacing } from '@/constants/theme';
 
@@ -17,11 +18,18 @@ const LANGUAGE_OPTIONS = [
   { lang: 'en', labelKey: 'settings.language_en' },
 ];
 
+const THEME_OPTIONS: { value: ThemeMode; labelKey: string; icon: IoniconName }[] = [
+  { value: 'system', labelKey: 'settings.theme_system', icon: 'phone-portrait-outline' },
+  { value: 'light', labelKey: 'settings.theme_light', icon: 'sunny-outline' },
+  { value: 'dark', labelKey: 'settings.theme_dark', icon: 'moon-outline' },
+];
+
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
   const { colors, themeMode, setThemeMode } = useAppTheme();
   const [currentLang, setCurrentLang] = useState(i18n.language);
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const changeLanguage = (lang: string) => {
@@ -30,35 +38,40 @@ export default function SettingsScreen() {
     setLanguageOpen(false);
   };
 
-  const themeItems: { value: ThemeMode; label: string }[] = [
-    { value: 'system', label: t('settings.theme_system') },
-    { value: 'light', label: t('settings.theme_light') },
-    { value: 'dark', label: t('settings.theme_dark') },
-  ];
+  const changeTheme = (mode: ThemeMode) => {
+    setThemeMode(mode);
+    setThemeOpen(false);
+  };
 
   const currentLanguageKey =
     LANGUAGE_OPTIONS.find((opt) => opt.lang === currentLang)?.labelKey ?? 'settings.language_en';
+  const currentThemeKey =
+    THEME_OPTIONS.find((opt) => opt.value === themeMode)?.labelKey ?? 'settings.theme_system';
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <CustomHeader title={t('settings.title')} />
       <View style={styles.content}>
         <AppText variant="label" weight="semibold" color={colors.textMuted} style={styles.sectionTitle}>
-          {t('settings.appearance')}
-        </AppText>
-        <SegmentedControl items={themeItems} value={themeMode} onChange={setThemeMode} />
-
-        <AppText variant="label" weight="semibold" color={colors.textMuted} style={styles.sectionTitle}>
-          {t('settings.language')}
+          {t('settings.general')}
         </AppText>
         <Card style={styles.group}>
           <ListRow
-            title={t('settings.language')}
-            left={<Ionicons name="globe-outline" size={20} color={colors.textSecondary} />}
-            amount={`${t(currentLanguageKey)}  ›`}
+            title={t('settings.appearance')}
+            left={<Ionicons name="contrast-outline" size={20} color={colors.textSecondary} />}
+            amount={`${t(currentThemeKey)}  ›`}
             amountColor={colors.textSecondary}
-            onPress={() => setLanguageOpen(true)}
+            onPress={() => setThemeOpen(true)}
           />
+          <View style={styles.divided}>
+            <ListRow
+              title={t('settings.language')}
+              left={<Ionicons name="globe-outline" size={20} color={colors.textSecondary} />}
+              amount={`${t(currentLanguageKey)}  ›`}
+              amountColor={colors.textSecondary}
+              onPress={() => setLanguageOpen(true)}
+            />
+          </View>
         </Card>
       </View>
 
@@ -70,6 +83,20 @@ export default function SettingsScreen() {
           {t('settings.version', { version: Constants.expoConfig?.version ?? '' })}
         </AppText>
       </View>
+
+      <BottomSheet visible={themeOpen} onRequestClose={() => setThemeOpen(false)}>
+        {THEME_OPTIONS.map((opt, i) => (
+          <View key={opt.value} style={i > 0 && styles.divided}>
+            <ListRow
+              title={t(opt.labelKey)}
+              left={<Ionicons name={opt.icon} size={20} color={colors.textSecondary} />}
+              amount={themeMode === opt.value ? CHECK : undefined}
+              amountColor={colors.primary}
+              onPress={() => changeTheme(opt.value)}
+            />
+          </View>
+        ))}
+      </BottomSheet>
 
       <BottomSheet visible={languageOpen} onRequestClose={() => setLanguageOpen(false)}>
         {LANGUAGE_OPTIONS.map((opt, i) => (

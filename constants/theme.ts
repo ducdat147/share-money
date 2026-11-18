@@ -24,6 +24,10 @@ export const DarkColors = {
   accentLight: '#F2D488',
   onAccent: '#14140F',
 
+  // Avatar thành viên: một tông olive cho mọi người
+  avatar: '#2F3A1C',
+  onAvatar: '#C5DE8E',
+
   // Status
   success: '#4ADE80',
   onSuccess: '#14140F',
@@ -72,6 +76,10 @@ export const LightColors: ThemeColors = {
   accent: '#B7791F',
   accentLight: '#E2B65A',
   onAccent: CommonColors.white,
+
+  // Avatar thành viên: một tông olive cho mọi người
+  avatar: '#E3EBCF',
+  onAvatar: '#3F5A10',
 
   // Status
   success: '#15803D',

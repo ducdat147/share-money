@@ -97,6 +97,7 @@
 	},
 	"settings": {
 		"appearance": "Appearance",
+		"general": "General",
 		"language": "Language",
 		"language_changed": "Language updated!",
 		"language_en": "English",

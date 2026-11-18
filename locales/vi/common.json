@@ -97,6 +97,7 @@
 	},
 	"settings": {
 		"appearance": "Giao diện",
+		"general": "Cài đặt chung",
 		"language": "Ngôn ngữ",
 		"language_changed": "Đã đổi ngôn ngữ!",
 		"language_en": "English",
