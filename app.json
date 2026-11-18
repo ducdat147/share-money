@@ -2,7 +2,7 @@
   "expo": {
     "name": "Share Money",
     "slug": "share_money",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "com.ducdat.sharemoney",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#4D7C0F"
